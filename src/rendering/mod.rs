@@ -3,9 +3,10 @@ pub mod shaders;
 pub mod types;
 pub mod uniforms;
 pub mod camera;
-pub mod geometry;
+pub mod meshes;
 pub mod buffers;
 pub mod traits;
+pub mod materials;
 
 use nalgebra_glm::{Mat4, Vec3};
 
@@ -24,11 +25,11 @@ struct RenderParameters {
     /// A stack of model matrices, used to implement hierachical rendering.
     matrix_stack: Vec<Mat4>,
     /// The scene projection matrix
-    view: Mat4,
+    pub view: Mat4,
     /// The camera view matrix
-    projection: Mat4,
+    pub projection: Mat4,
     /// The model transformation matrix
-    model: Mat4
+    pub model: Mat4
 }
 
 impl RenderParameters {
