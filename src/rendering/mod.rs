@@ -1,6 +1,7 @@
 
 pub mod shaders;
 pub mod types;
+pub mod uniforms;
 
 use nalgebra_glm::{Mat4, Vec3};
 

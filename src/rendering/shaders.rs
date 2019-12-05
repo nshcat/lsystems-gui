@@ -108,9 +108,10 @@ pub struct Program {
     /// The vertex shader instance
     vertex: Shader,
     /// The program object handle
-    handle: GlHandle
+    pub handle: GlHandle
 }
 
+/// Creation
 impl Program {
     /// Create a new shader program from existing shader objects.
     pub fn from_shaders(vs: Shader, fs: Shader) -> Result<Program, ProgramError> {
@@ -172,6 +173,16 @@ impl Program {
         }
 
         Self::from_shaders(vs.unwrap(), fs.unwrap())
+    }
+}
+
+/// Operations
+impl Program {
+    /// Activate this program object for the active OpenGL context.
+    pub fn use_program(&self) {
+        unsafe {
+            gl::UseProgram(self.handle);
+        }
     }
 }
 

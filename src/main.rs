@@ -6,8 +6,10 @@ use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
 use imgui_glfw_rs::imgui;
 use imgui_glfw_rs::ImguiGLFW;
+use nalgebra_glm::{Mat4};
 
-use rendering::shaders::{Shader, ShaderType};
+use rendering::shaders::{Shader, ShaderType, Program};
+use rendering::uniforms::*;
 
 mod rendering;
 
@@ -41,8 +43,6 @@ fn main() {
     let mut imgui_glfw = ImguiGLFW::new(&mut imgui, &mut window);
 
     let mut show_menu = true;
-
-    let shader = Shader::from_source(vertexShaderSource, ShaderType::VertexShader).unwrap();
 
     while !window.should_close() {
         unsafe {
@@ -90,5 +90,13 @@ const vertexShaderSource: &str = r#"
     layout (location = 0) in vec3 aPos;
     void main() {
        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    }
+"#;
+
+const fragmentShaderSource: &str = r#"
+    #version 330 core
+    out vec4 FragColor;
+    void main() {
+       FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
     }
 "#;
