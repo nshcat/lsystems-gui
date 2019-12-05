@@ -44,10 +44,19 @@ fn main() {
 
     let mut show_menu = true;
 
+    let program = Program::from_source(vertexShaderSource, fragmentShaderSource).unwrap();
+
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
+
+        program.use_program();
+        
+        {
+            // Render main scene here
+        }
+
 
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
 
@@ -87,16 +96,22 @@ fn main() {
 
 const vertexShaderSource: &str = r#"
     #version 330 core
-    layout (location = 0) in vec3 aPos;
-    void main() {
-       gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+
+    layout (location = 0) in vec3 Position;
+
+    void main()
+    {
+        gl_Position = vec4(Position, 1.0);
     }
 "#;
 
 const fragmentShaderSource: &str = r#"
     #version 330 core
-    out vec4 FragColor;
-    void main() {
-       FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+
+    out vec4 Color;
+
+    void main()
+    {
+        Color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
     }
 "#;
