@@ -208,7 +208,7 @@ pub struct Mesh {
 
 impl Mesh {
     /// Create a new mesh with given primitive type from given geometry
-    pub fn new(pt: PrimitiveType, mat: Box<dyn Material>, geometry: Box<dyn Geometry>) -> Mesh {
+    pub fn new(pt: PrimitiveType, mat: Box<dyn Material>, geometry: &dyn Geometry) -> Mesh {
         let attributes = geometry.retrieve_attributes();
         
         let mut mesh = Mesh {

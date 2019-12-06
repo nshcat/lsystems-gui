@@ -68,7 +68,7 @@ fn main() {
         Vertex::new(Vec3::new(-0.5, -0.5, 0.0), Vec3::new(0.0, 1.0, 0.0)),
         Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0))
     ];
-    let mesh = Mesh::new(PrimitiveType::Triangles, mat, Box::new(BasicGeometry::from_vertices(&vertices)));
+    let mesh = Mesh::new(PrimitiveType::Triangles, mat, &BasicGeometry::from_vertices(&vertices));
 
     let mut rp = RenderParameters::identity();
     // ======================================
