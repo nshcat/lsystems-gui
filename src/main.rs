@@ -49,6 +49,17 @@ fn main() {
 
     let mut show_menu = true;
 
+    // == DEBUG ==
+    /*let attrib1: Box<dyn AttributeArrayBase> = Box::new(
+        AttributeArray::<Vec3>::new(
+            AttributeDescriptor::new(0, "position")
+        )
+    );
+    
+    let attrib_buffer_1: Box<dyn VertexBufferBase> = attrib1.to_vertex_buffer();*/
+    // ===========
+
+
     // ======== Scene setup =================
     let mat = Box::new(SimpleMaterial::new());
 
@@ -57,7 +68,7 @@ fn main() {
         Vertex::new(Vec3::new(-0.5, -0.5, 0.0), Vec3::new(0.0, 1.0, 0.0)),
         Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0))
     ];
-    let mesh = Mesh::new(PrimitiveType::Triangles, mat, &vertices);
+    let mesh = Mesh::new(PrimitiveType::Triangles, mat, Box::new(BasicGeometry::from_vertices(&vertices)));
 
     let mut rp = RenderParameters::identity();
     // ======================================
