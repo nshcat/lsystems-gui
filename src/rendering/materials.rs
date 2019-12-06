@@ -17,7 +17,7 @@ pub trait Material {
 
 
 /// A simple material that applies no shading.
-struct SimpleMaterial {
+pub struct SimpleMaterial {
     /// The shader program associated with this material
     program: Program
 }

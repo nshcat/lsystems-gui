@@ -6,7 +6,7 @@ use nalgebra_glm::{Vec3};
 /// A trait for objects that can be rendered to screen
 pub trait Render {
     /// Render object to screen with given rendering parameters.
-    fn render(params: &mut RenderParameters);
+    fn render(&self, params: &mut RenderParameters);
 }
 
 /// A trait for types that can be uploaded to GPU buffers. In many cases, these are types that

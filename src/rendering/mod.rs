@@ -21,7 +21,7 @@ pub enum ValueType {
 /// It also allows the implementation of hierachical rendering by offering methods to accumulate
 /// model transformations.
 #[derive(Clone)]
-struct RenderParameters {
+pub struct RenderParameters {
     /// A stack of model matrices, used to implement hierachical rendering.
     matrix_stack: Vec<Mat4>,
     /// The scene projection matrix
@@ -34,7 +34,7 @@ struct RenderParameters {
 
 impl RenderParameters {
     /// Create a new instance based on given projection and view matrices.
-    fn new(view: Mat4, proj: Mat4) -> RenderParameters {
+    pub fn new(view: Mat4, proj: Mat4) -> RenderParameters {
         RenderParameters {
             view: view,
             projection: proj,
@@ -43,30 +43,36 @@ impl RenderParameters {
         }
     }
 
+    /// Create a new render parameters instance that contains only identity matrices.
+    /// For testing purposes only.
+    pub fn identity() -> RenderParameters {
+        Self::new(Mat4::identity(), Mat4::identity())
+    }
+
     /// Push the current model matrix on to the matrix stack, saving it for later restoration.
-    fn push_matrix(&mut self) {
+    pub fn push_matrix(&mut self) {
         self.matrix_stack.push(self.model);
     }
 
     /// Restore the model matrix by replacing it with the top element of the matrix stack. 
-    fn pop_matrix(&mut self) {
+    pub fn pop_matrix(&mut self) {
         self.model = self.matrix_stack.pop().expect("pop_matrix called on empty matrix stack");
     }
 
     /// Add given translation to the model matrix.
-    fn translate(&mut self, v: &Vec3) {
+    pub fn translate(&mut self, v: &Vec3) {
         let mat = Mat4::new_translation(v);
         self.add_matrix(&mat);
     }
 
     /// Add given uniform scaling to the model matrix.
-    fn scale(&mut self, f: f32) {
+    pub fn scale(&mut self, f: f32) {
         let mat = Mat4::new_scaling(f);
         self.add_matrix(&mat);
     }
     
     /// Add given transformation matrix to the model matrix.
-    fn add_matrix(&mut self, mat: &Mat4) {
+    pub fn add_matrix(&mut self, mat: &Mat4) {
         self.model *= mat;
     }
 }
