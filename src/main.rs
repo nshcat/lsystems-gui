@@ -55,7 +55,7 @@ fn main() {
     let vertices = vec![
         Vertex::new(Vec3::new(0.5, -0.5, 0.0),  Vec3::new(1.0, 0.0, 0.0)),
         Vertex::new(Vec3::new(-0.5, -0.5, 0.0), Vec3::new(0.0, 1.0, 0.0)),
-        Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0)),
+        Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0))
     ];
     let mesh = Mesh::new(PrimitiveType::Triangles, mat, &vertices);
 
