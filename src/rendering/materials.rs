@@ -51,7 +51,6 @@ impl SimpleMaterial {
         layout (location = 0) in vec3 Position;
         layout (location = 1) in vec3 Color;
         layout (location = 2) in vec3 Normal;
-        layout (location = 3) in float Alpha;
 
         uniform mat4 projection;
         uniform mat4 view;
@@ -59,14 +58,12 @@ impl SimpleMaterial {
 
         out VS_OUTPUT {
             vec3 Color;
-            float Alpha;
         } OUT;
 
         void main()
         {
             gl_Position = projection * view * model * vec4(Position, 1.0);
             OUT.Color = Color;
-            OUT.Alpha = Alpha;
         }
     "#;
 
@@ -76,14 +73,13 @@ impl SimpleMaterial {
 
         in VS_OUTPUT {
             vec3 Color;
-            float Alpha;
         } IN;
 
         out vec4 Color;
 
         void main()
         {
-            Color = vec4(IN.Color, IN.Alpha);
+            Color = vec4(IN.Color, 1.0f);
         }
     "#;
 }

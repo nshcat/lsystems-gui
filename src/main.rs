@@ -59,15 +59,6 @@ fn main() {
     ];
 
     let mut geometry = ExtendableBasicGeometry::from_vertices(&vertices);
-    geometry.add_attr::<f32>("alpha");
-    {
-        let attrib = geometry.attr_by_label_mut("alpha");
-
-        attrib.local_buffer = vec![
-            1.0, 0.15, 0.0
-        ]
-    }
-
 
     let mesh = Mesh::new(PrimitiveType::Triangles, mat, &geometry);
 
