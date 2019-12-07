@@ -1,3 +1,29 @@
+/*
+    Usage of DynamicGeometry:
+
+        let mat = Box::new(SimpleMaterial::new());
+
+        let vertices = vec![
+            Vertex::new(Vec3::new(0.5, -0.5, 0.0),  Vec3::new(1.0, 0.0, 0.0)),
+            Vertex::new(Vec3::new(-0.5, -0.5, 0.0), Vec3::new(0.0, 1.0, 0.0)),
+            Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0))
+        ];
+
+        let mut geometry = ExtendableBasicGeometry::from_vertices(&vertices);
+        geometry.add_attr::<f32>("alpha");
+        {
+            let attrib = geometry.attr_by_label_mut("alpha");
+
+            attrib.local_buffer = vec![
+                1.0, 0.15, 0.0
+            ]
+        }
+
+        let mesh = Mesh::new(PrimitiveType::Triangles, mat, &geometry);
+
+*/
+
+
 use nalgebra_glm::{Vec3, Mat4};
 use std::mem::*;
 use std::any::Any;
