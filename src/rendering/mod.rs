@@ -76,3 +76,36 @@ impl RenderParameters {
         self.model *= mat;
     }
 }
+
+/// A structure managing the OpenGL viewport
+pub struct Viewport {
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32
+}
+
+impl Viewport {
+    /// Create a new viewport for a window with given dimensions.
+    pub fn for_window(w: u32, h: u32) -> Viewport {
+        Viewport {
+            x: 0,
+            y: 0,
+            w,
+            h
+        }
+    }
+
+    /// Update the dimensions of the viewport.
+    pub fn update(&mut self, w: u32, h: u32) {
+        self.w = w;
+        self.h = h;
+    }
+
+    /// Enable this viewport.
+    pub fn enable(&self) {
+        unsafe {
+            gl::Viewport(self.x as _, self.y as _, self.w as _, self.h as _);
+        }
+    }
+}

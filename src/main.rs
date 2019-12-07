@@ -2,7 +2,7 @@
 use lsystems_core::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::{DrawOperation, DrawingParameters};
-use glfw::{Action, Key, Context};
+use glfw::{Action, Key, Context, WindowEvent::Size};
 use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
 use imgui_glfw_rs::imgui;
@@ -15,7 +15,7 @@ use rendering::buffers::*;
 use rendering::meshes::*;
 use rendering::traits::*;
 use rendering::materials::*;
-use rendering::{RenderParameters};
+use rendering::{RenderParameters, Viewport};
 
 mod rendering;
 
@@ -42,6 +42,13 @@ fn main() {
         gl::Enable(gl::DEPTH_TEST);
         gl::DepthFunc(gl::LESS);
         gl::ClearColor(0.1, 0.1, 0.1, 1.0);
+    }
+
+    let mut viewport;
+    {
+        let (w, h) = window.get_size();
+
+        viewport = Viewport::for_window(w as _, h as _);
     }
 
     let mut imgui = ImContext::create();
@@ -91,6 +98,8 @@ fn main() {
     let mut rp = RenderParameters::identity();
     // ======================================
 
+    viewport.enable();
+
     while !window.should_close() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -125,6 +134,10 @@ fn main() {
             match event {
                 glfw::WindowEvent::Key(glfw::Key::M, _, Action::Press, _) => {
                     show_menu = !show_menu;
+                },
+                glfw::WindowEvent::Size(w, h) => {
+                    viewport.update(w as _, h as _);
+                    viewport.enable();
                 },
                 _ => {},
             }
