@@ -1,7 +1,10 @@
 use nalgebra_glm::{Vec3, Mat4};
 use std::mem::*;
+use std::any::Any;
 use gl::types::*;
 use std::ptr::*;
+use std::collections::*;
+use std::borrow::*;
 use crate::rendering::RenderParameters;
 use crate::rendering::buffers::{VertexArray, VertexBuffer, VertexBufferBase};
 use crate::rendering::materials::*;
@@ -73,6 +76,15 @@ pub trait AttributeArrayBase {
 
     /// How many elements are currently stored in the local buffer.
     fn len(&self) -> usize;
+
+    /// Retrieve this instance as a reference to Any. This is used for downcasting.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Retrieve this instance as a mutable reference to Any. This is used for downcasting.
+    fn as_mut_any(&mut self) -> &mut dyn Any;
+
+    /// Retrieve attribute label
+    fn label(&self) -> &str;
 }
 
 /// A struct managing the local data buffer and information for a single vertex attribute
@@ -115,6 +127,21 @@ impl<T: 'static> AttributeArrayBase for AttributeArray<T> where T: GPUType {
     fn len(&self) -> usize {
         self.local_buffer.len()
     }
+
+    /// Retrieve this instance as a reference to Any. This is used for downcasting.
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    /// Retrieve this instance as a mutable reference to Any. This is used for downcasting.
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    /// Retrieve attribute label
+    fn label(&self) -> &str {
+        &self.descriptor.label
+    }
 }
 
 /// Basic geometry trait.
@@ -127,7 +154,114 @@ pub trait Geometry {
 /// materials that might require additional data in addition to the default vertex data.
 /// This would save the user from having to declare their own geometry kind.
 pub trait DynamicGeometry: Geometry {
-    // TODO
+    /// Add a new vertex attribute with given gpu type and label to this geometry.
+    fn add_attr<T: GPUType + 'static>(&mut self, label: &str);
+    /// Retrieve mutable reference to the vertex attribute with given label.
+    fn attr_by_label_mut<T: GPUType + 'static>(&mut self, label: &str) -> &mut AttributeArray<T>;
+    /// Retrieve shared reference to the vertex attribute with given label.
+    fn attr_by_label<T: GPUType + 'static>(&self, label: &str) -> & AttributeArray<T>;
+}
+
+/// A basic geometry that can dynamically be extended with additional attributes.
+pub struct ExtendableBasicGeometry {
+    /// Position value for each vertex
+    positions: AttributeArray<Vec3>,
+    /// Color value for each vertex
+    colors: AttributeArray<Vec3>,
+    /// Normal vector for each vertex
+    normals: AttributeArray<Vec3>,
+    /// Dynamically added attributes
+    dynamic: Vec<Box<dyn AttributeArrayBase>>
+}
+
+impl ExtendableBasicGeometry {
+    fn next_index(&self) -> usize {
+        self.dynamic.len() + 3
+    }
+}
+
+impl Geometry for ExtendableBasicGeometry {
+    fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
+        let mut vec = Vec::<&dyn AttributeArrayBase>::new(); 
+
+        vec.push(&self.positions);
+        vec.push(&self.colors);
+        vec.push(&self.normals);
+
+        let dynamics: Vec<&dyn AttributeArrayBase> = self.dynamic.iter().map(|a| a.as_ref()).collect();
+
+        vec.extend_from_slice(&dynamics);
+
+        vec
+    }
+}
+
+impl ExtendableBasicGeometry {
+    /// Construct geometry with default attributes from given slice of vertices
+    pub fn from_vertices(vertices: &[Vertex]) -> ExtendableBasicGeometry {
+        let mut geometry = ExtendableBasicGeometry {
+            positions: AttributeArray::with_capacity(0, "position", vertices.len()),
+            colors: AttributeArray::with_capacity(1, "color", vertices.len()),
+            normals: AttributeArray::with_capacity(2, "normal", vertices.len()),
+            dynamic: Vec::new()
+        };
+
+        for v in vertices {
+            geometry.positions.local_buffer.push(v.position);
+            geometry.colors.local_buffer.push(v.color);
+            geometry.normals.local_buffer.push(v.normal);
+        }
+
+        geometry
+    }
+
+    /// Construct empty geometry instance
+    pub fn new() -> ExtendableBasicGeometry {
+        ExtendableBasicGeometry {
+            positions: AttributeArray::new(0, "position"),
+            colors: AttributeArray::new(1, "color"),
+            normals: AttributeArray::new(2, "normal"),
+            dynamic: Vec::new()
+        }
+    }
+}
+
+impl DynamicGeometry for ExtendableBasicGeometry {
+    fn add_attr<T: GPUType + 'static>(&mut self, label: &str) {
+        let mut attrib = Box::new(AttributeArray::<T>::new(
+            self.next_index(),
+            label
+        ));
+        self.dynamic.push(attrib);
+    }
+
+    fn attr_by_label_mut<T: GPUType + 'static>(&mut self, label: &str) -> &mut AttributeArray<T> {
+        let rf = self.dynamic.iter_mut().find(|a| a.label() == label).expect("Attribute with requested label not found");
+        let mut_rf = &mut **rf;
+
+        let any_rf = mut_rf.as_mut_any();
+
+        let concrete_ref: &mut AttributeArray<T> = match any_rf.downcast_mut::<AttributeArray<T>>() {
+            Some(a) => a,
+            None => panic!("attr_by_label_mut: Type mismatch!"),
+        };
+
+        concrete_ref
+    }
+
+    fn attr_by_label<T: GPUType + 'static>(&self, label: &str) -> &AttributeArray<T> {
+        let rf = self.dynamic.iter().find(|a| a.label() == label).expect("Attribute with requested label not found");
+        let direct_rf = &**rf;
+
+        let any_rf = direct_rf.as_any();
+
+        let concrete_ref: &AttributeArray<T> = match any_rf.downcast_ref::<AttributeArray<T>>() {
+            Some(a) => a,
+            None => panic!("attr_by_label: Type mismatch!"),
+        };
+
+        concrete_ref
+    }
 }
 
 
