@@ -1,6 +1,7 @@
 
 use lsystems_core::*;
-use lsystems_core::drawing::{DrawOperation};
+use lsystems_core::drawing::types::*;
+use lsystems_core::drawing::{DrawOperation, DrawingParameters};
 use glfw::{Action, Key, Context};
 use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
@@ -50,17 +51,42 @@ fn main() {
     let mut show_menu = true;
 
     // ======== Scene setup =================
+
+
     let mat = Box::new(SimpleMaterial::new());
 
-    let vertices = vec![
-        Vertex::new(Vec3::new(0.5, -0.5, 0.0),  Vec3::new(1.0, 0.0, 0.0)),
-        Vertex::new(Vec3::new(-0.5, -0.5, 0.0), Vec3::new(0.0, 1.0, 0.0)),
-        Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0))
-    ];
+    let mut vertices = Vec::new();
 
-    let mut geometry = ExtendableBasicGeometry::from_vertices(&vertices);
+    fn convert_vector(vec: &Vector3f) -> Vec3 {
+        Vec3::new(vec.x as _, vec.y as _, vec.z as _)
+    }
 
-    let mesh = Mesh::new(PrimitiveType::Triangles, mat, &geometry);
+    let params = DrawingParameters {
+        step: 0.1,
+        angle_delta: 60.0_f64.to_radians(),
+        .. DrawingParameters::new()
+    };
+
+    let mut system = LSystem::new();
+    system.parse("F--F--F", "F -> F+F--F+F");
+    system.interpretations.associate('F', DrawOperation::Forward);
+    system.interpretations.associate('+', DrawOperation::TurnRight);
+    system.interpretations.associate('-', DrawOperation::TurnLeft);
+    system.set_drawing_parameters(&params);
+    system.set_iteration_depth(2);
+    system.iterate();
+    system.interpret();
+
+    for segment in &system.line_segments {
+        let begin = Vertex::new(convert_vector(&segment.begin), Vec3::repeat(1.0));
+        let end = Vertex::new(convert_vector(&segment.end), Vec3::repeat(1.0));
+
+        vertices.push(begin);
+        vertices.push(end);
+    }
+
+
+    let mesh = Mesh::new(PrimitiveType::Lines, mat, &BasicGeometry::from_vertices(&vertices));
 
     let mut rp = RenderParameters::identity();
     // ======================================
