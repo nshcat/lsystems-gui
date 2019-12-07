@@ -72,3 +72,24 @@ impl GPUType for Vec3 {
     }
 }
 
+impl GPUType for f32 {
+    /// The size of a single component, in bytes.
+    const ELEMENT_SIZE: usize = std::mem::size_of::<f32>();
+
+    /// The size of a single instance of the type, in bytes. This includes all the components!
+    /// This is used to calculate the stride.
+    const INSTANCE_SIZE: usize = Self::ELEMENT_SIZE;
+
+    /// How many components are in a single instance of the type. For example,
+    /// a Vec3 contains 3 elements.
+    const NUM_COMPONENTS: usize = 1;
+
+    /// The OpenGL value type of elements in type. For example, a Vec3 contains floats.
+    const ELEMENT_TYPE: ValueType = ValueType::Float;
+
+    /// Retrieve pointer to memory for an instance of this type.
+    unsafe fn to_element_raw_ptr(&self) -> *const GLvoid {
+        self as *const f32 as *const _
+    }
+}
+

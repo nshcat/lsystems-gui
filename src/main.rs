@@ -57,7 +57,19 @@ fn main() {
         Vertex::new(Vec3::new(-0.5, -0.5, 0.0), Vec3::new(0.0, 1.0, 0.0)),
         Vertex::new(Vec3::new(0.0, 0.5, 0.0),   Vec3::new(0.0, 0.0, 1.0))
     ];
-    let mesh = Mesh::new(PrimitiveType::Triangles, mat, &vertices);
+
+    let mut geometry = ExtendableBasicGeometry::from_vertices(&vertices);
+    geometry.add_attr::<f32>("alpha");
+    {
+        let attrib = geometry.attr_by_label_mut("alpha");
+
+        attrib.local_buffer = vec![
+            1.0, 0.15, 0.0
+        ]
+    }
+
+
+    let mesh = Mesh::new(PrimitiveType::Triangles, mat, &geometry);
 
     let mut rp = RenderParameters::identity();
     // ======================================
