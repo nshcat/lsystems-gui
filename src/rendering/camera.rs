@@ -79,12 +79,16 @@ pub struct Camera {
 
 impl Camera {
     /// Create new camera instance
-    pub fn new(width: u32, height: u32, proj_type: ProjectionType, state: CameraState) -> Camera {
+    pub fn new(width: u32, height: u32, proj_type: ProjectionType) -> Camera {
         let mut cam = Camera {
             width,
             height,
             proj_type,
-            state,
+            state: CameraState::new(
+                Vec3::new(0.0, 0.0, 1.0),
+                Vec3::new(0.0, 1.0, 0.0),
+                Vec3::new(0.0, 0.0, 0.0)
+            ),
             projection: Mat4::identity(),
             view: Mat4::identity(),
             drag_start: IVec2::zeros(),

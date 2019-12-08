@@ -2,7 +2,7 @@
 use lsystems_core::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::{DrawOperation, DrawingParameters};
-use glfw::{Action, Key, Context, WindowEvent::Size};
+use glfw::{Action, Key, Context, WindowEvent::Size, SwapInterval};
 use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
 use imgui_glfw_rs::imgui;
@@ -22,7 +22,7 @@ mod rendering;
 
 fn main() {
 	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
+    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3)); 
 
     let (mut window, events) = glfw
         .create_window(
@@ -45,6 +45,9 @@ fn main() {
         gl::ClearColor(0.1, 0.1, 0.1, 1.0);
     }
 
+    // Limit to 60 fps
+    glfw.set_swap_interval(SwapInterval::Sync(1));
+
     let mut viewport;
     let mut camera;
     {
@@ -54,12 +57,7 @@ fn main() {
 
         camera = Camera::new(
             w as _, h as _,
-            ProjectionType::Perspective(75.0),
-            CameraState::new(
-                Vec3::new(0.0, 0.0, 1.0),
-                Vec3::new(0.0, 1.0, 0.0),
-                Vec3::new(0.0, 0.0, 0.0)
-            )
+            ProjectionType::Perspective(75.0)
         );
     }
 
@@ -128,13 +126,11 @@ fn main() {
             .size([300.0, 100.0], Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text(im_str!("Hello world!"));
-                ui.text(im_str!("こんにちは世界！"));
-                ui.text(im_str!("This...is...imgui-rs!"));
                 ui.separator();
-                let mouse_pos = ui.io().mouse_pos;
+                let fps = ui.io().framerate;
                 ui.text(format!(
-                    "Mouse Position: ({:.1},{:.1})",
-                    mouse_pos[0], mouse_pos[1]
+                    "FPS: {:.1}",
+                    fps
                 ));
             });
 
