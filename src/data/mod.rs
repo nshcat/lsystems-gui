@@ -10,7 +10,7 @@ use lsystems_core::drawing::{DrawingParameters, DrawOperation};
 pub mod presets;
 
 /// A struct containing all the information that describes a single LSystem.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct LSystemParameters {
     pub name: String,
 	pub drawing_parameters: DrawingParameters,

@@ -27,11 +27,9 @@ mod data;
 mod scene;
 
 use crate::data::LSystemParameters;
+use crate::scene::*;
 
 fn main() {
-    let penrose: LSystemParameters = from_str(data::presets::PENROSE).unwrap();
-
-
 	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3)); 
 
@@ -79,45 +77,7 @@ fn main() {
     let mut show_menu = true;
 
     // ======== Scene setup =================
-
-
-    let mat = Box::new(SimpleMaterial::new());
-
-    let mut vertices = Vec::new();
-
-    fn convert_vector(vec: &Vector3f) -> Vec3 {
-        Vec3::new(vec.x as _, vec.y as _, vec.z as _)
-    }
-
-    let params = DrawingParameters {
-        start_position: Vector2f::new(-0.25, 0.25),
-        step: 0.1,
-        angle_delta: 60.0_f64.to_radians(),
-         
-        .. DrawingParameters::new()
-    };
-
-    let mut system = LSystem::new();
-    system.parse("F--F--F", "F -> F+F--F+F");
-    system.interpretations.associate('F', DrawOperation::Forward);
-    system.interpretations.associate('+', DrawOperation::TurnRight);
-    system.interpretations.associate('-', DrawOperation::TurnLeft);
-    system.set_drawing_parameters(&params);
-    system.set_iteration_depth(2);
-    system.iterate();
-    system.interpret();
-
-    for segment in &system.line_segments {
-        let begin = Vertex::new(convert_vector(&segment.begin), Vec3::repeat(1.0));
-        let end = Vertex::new(convert_vector(&segment.end), Vec3::repeat(1.0));
-
-        vertices.push(begin);
-        vertices.push(end);
-    }
-
-
-    let mesh = Mesh::new(PrimitiveType::Lines, mat, &BasicGeometry::from_vertices(&vertices));
-
+    let mut scene = LSystemManager::new(&from_str(data::presets::PENROSE).unwrap());
     // ======================================
 
     viewport.enable();
@@ -129,7 +89,7 @@ fn main() {
 
         let mut params = camera.to_render_parameters();
 
-        mesh.render(&mut params);
+        scene.render(&mut params);
 
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
 
