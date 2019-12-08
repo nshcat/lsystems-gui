@@ -7,7 +7,11 @@ use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
 use imgui_glfw_rs::imgui;
 use imgui_glfw_rs::ImguiGLFW;
+use serde_json::*;
 use nalgebra_glm::{Mat4, Vec3};
+
+#[macro_use]
+use maplit::*;
 
 use rendering::shaders::{Shader, ShaderType, Program};
 use rendering::uniforms::*;
@@ -19,8 +23,38 @@ use rendering::camera::*;
 use rendering::{RenderParameters, Viewport};
 
 mod rendering;
+mod data;
 
 fn main() {
+    let x = data::LSystemParameters{
+        drawing_parameters: DrawingParameters {
+            start_position: Vector2f::new(-0.25, 0.25),
+            step: 0.1,
+            angle_delta: 60.0_f64.to_radians(),   
+            .. DrawingParameters::new()
+        },
+        axiom: "F--F--F".to_string(),
+        rules: vec![
+            "F -> F+F--F+F".to_string()
+        ],
+        interpretations: hashmap!{
+            'F' => DrawOperation::Forward,
+            '+' => DrawOperation::TurnRight,
+            '-' => DrawOperation::TurnLeft
+        },
+        color_palette: Vec::new(),
+        seed: 0,
+        iteration_depth: 2,
+        modify_camera: false,
+        camera_radius: 0.0,
+        camera_phi: 0.0,
+        camera_theta: 0.0
+    };
+
+    let json = serde_json::to_string_pretty(&x).unwrap();
+
+    println!("{}", json);
+
 	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3)); 
 
