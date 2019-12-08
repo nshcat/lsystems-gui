@@ -1,0 +1,32 @@
+{
+  "name": "Koch Snowflake",
+  "drawing_parameters": {
+    "start_position": [
+      -0.25,
+      0.25
+    ],
+    "start_angle": 0.0,
+    "angle_delta": 1.0471975511965976,
+    "step": 0.1,
+    "color_palette_size": 1,
+    "initial_line_width": 1.0,
+    "line_width_delta": 0.1
+  },
+  "modify_camera": false,
+  "camera_radius": 0.0,
+  "camera_phi": 0.0,
+  "camera_theta": 0.0,
+  "axiom": "F--F--F",
+  "seed": 0,
+  "iteration_depth": 2,
+  "rules": [
+    "F -> F+F--F+F"
+  ],
+  "interpretations": {
+    "F": "Forward",
+    "+": "TurnRight",
+    "-": "TurnLeft"
+  },
+  "color_palette": []
+}
+

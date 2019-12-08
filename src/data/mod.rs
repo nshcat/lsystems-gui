@@ -4,11 +4,15 @@ use serde_derive::*;
 use std::string::*;
 use std::collections::*;
 use nalgebra_glm::Vec3;
+use lsystems_core::*;
 use lsystems_core::drawing::{DrawingParameters, DrawOperation};
+
+pub mod presets;
 
 /// A struct containing all the information that describes a single LSystem.
 #[derive(Serialize, Deserialize)]
 pub struct LSystemParameters {
+    pub name: String,
 	pub drawing_parameters: DrawingParameters,
 	/// Whether the camera position will be modified when this LSystem gets loaded
 	pub modify_camera: bool,
@@ -22,7 +26,6 @@ pub struct LSystemParameters {
 	pub interpretations: HashMap<char, DrawOperation>,
 	pub color_palette: Vec<Vec3>
 }
-
 
 
 
