@@ -216,6 +216,23 @@ impl Camera {
         self.update_view();
     }
 
+    /// Zoom camera
+    fn zoom(&mut self, delta: f64) {
+        self.radius -= delta;
+
+        // The radius is not allowed to become negative!
+        if self.radius <= 0.0 {
+            /*self.radius = 2.0;
+
+            let look = (self.state.target - self.camera_position()).normalize();
+            self.state.target = self.state.target + (look * 30.0);*/
+            self.radius = 0.0;
+        }
+
+        self.update_state();
+        self.update_view();
+    }
+
     /// Rotate camera
     fn rotate(&mut self, pos: &IVec2) {
         let dif =  self.drag_start - pos;
@@ -270,6 +287,9 @@ impl Camera {
             },
             WindowEvent::MouseButton(_, Action::Release, _) => {
                 self.drag_end();
+            },
+            WindowEvent::Scroll(_, dy) => {
+                self.zoom(dy * 0.2);
             },
             WindowEvent::CursorPos(x, y) => {
                 let pos = IVec2::new(*x as _, *y as _);
