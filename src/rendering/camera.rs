@@ -78,6 +78,21 @@ pub struct Camera {
 }
 
 impl Camera {
+    /// Create new camera instance with given radius and angles
+    pub fn with_angles(width: u32, height: u32, proj_type: ProjectionType, radius: f64, phi: f64, theta: f64) -> Camera {
+        let mut cam = Camera {
+            radius,
+            phi,
+            theta,
+            .. Camera::new(width, height, proj_type)
+        };
+
+        cam.update_state();
+        cam.update_view();
+
+        cam
+    }
+
     /// Create new camera instance
     pub fn new(width: u32, height: u32, proj_type: ProjectionType) -> Camera {
         let mut cam = Camera {
