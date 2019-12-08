@@ -15,6 +15,7 @@ use rendering::buffers::*;
 use rendering::meshes::*;
 use rendering::traits::*;
 use rendering::materials::*;
+use rendering::camera::*;
 use rendering::{RenderParameters, Viewport};
 
 mod rendering;
@@ -45,10 +46,21 @@ fn main() {
     }
 
     let mut viewport;
+    let mut camera;
     {
         let (w, h) = window.get_size();
 
         viewport = Viewport::for_window(w as _, h as _);
+
+        camera = Camera::new(
+            w as _, h as _,
+            ProjectionType::Perspective(75.0),
+            CameraState::new(
+                Vec3::new(0.0, 0.0, 1.0),
+                Vec3::new(0.0, 1.0, 0.0),
+                Vec3::new(0.0, 0.0, 0.0)
+            )
+        );
     }
 
     let mut imgui = ImContext::create();
@@ -69,8 +81,10 @@ fn main() {
     }
 
     let params = DrawingParameters {
+        start_position: Vector2f::new(-0.25, 0.25),
         step: 0.1,
         angle_delta: 60.0_f64.to_radians(),
+         
         .. DrawingParameters::new()
     };
 
@@ -95,7 +109,6 @@ fn main() {
 
     let mesh = Mesh::new(PrimitiveType::Lines, mat, &BasicGeometry::from_vertices(&vertices));
 
-    let mut rp = RenderParameters::identity();
     // ======================================
 
     viewport.enable();
@@ -105,7 +118,9 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        mesh.render(&mut rp);
+        let mut params = camera.to_render_parameters();
+
+        mesh.render(&mut params);
 
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
 
@@ -131,6 +146,11 @@ fn main() {
         for (_, event) in glfw::flush_messages(&events) {
             imgui_glfw.handle_event(&mut imgui, &event);
 
+            // Only pass events to camera is imgui does not capture them
+            if !imgui.io().want_capture_mouse && !imgui.io().want_capture_keyboard {
+                camera.handle_event(&window, &event);
+            }
+
             match event {
                 glfw::WindowEvent::Key(glfw::Key::M, _, Action::Press, _) => {
                     show_menu = !show_menu;
@@ -138,6 +158,8 @@ fn main() {
                 glfw::WindowEvent::Size(w, h) => {
                     viewport.update(w as _, h as _);
                     viewport.enable();
+
+                    camera.update(w as _, h as _);
                 },
                 _ => {},
             }
