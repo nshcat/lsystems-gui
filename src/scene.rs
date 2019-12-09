@@ -12,13 +12,13 @@ use crate::rendering::materials::*;
 use crate::rendering::traits::*;
 
 
-
-
 /// A struct managing the currently displayed LSystem and providing methods
 /// to update certain parts of it.
 pub struct LSystemManager {
     /// The parameters describing the currently displayed LSystem.
     pub lsystem_params: LSystemParameters,
+    /// The application settings
+    pub app_settings: ApplicationSettings,
     /// The lsystem instance
     lsystem: LSystem,
     /// The mesh containing all lines of the lsystem
@@ -27,7 +27,7 @@ pub struct LSystemManager {
 
 impl LSystemManager {
     /// Create LSystem manager instance with given initial lsystem
-    pub fn new(params: &LSystemParameters) -> LSystemManager {
+    pub fn new(params: &LSystemParameters, settings: &ApplicationSettings) -> LSystemManager {
         let mut lsystem = LSystem::new();
 
         Self::setup_lsystem(&mut lsystem, params);
@@ -39,30 +39,63 @@ impl LSystemManager {
 
         LSystemManager{
             lsystem_params: params.clone(),
+            app_settings: settings.clone(),
             lines_mesh: mesh,
             lsystem
         }
     }
 
+    /// Shortcut to auto refresh settings value
+    fn auto_refresh(&self) -> bool {
+        self.app_settings.auto_refresh
+    }
+
+
+    pub fn force_refresh_all(&mut self) {
+        self.lsystem.set_drawing_parameters(&self.lsystem_params.drawing_parameters);
+        self.lsystem.set_iteration_depth(self.lsystem_params.iteration_depth);
+        self.apply_interpretations();
+        self.apply_rules();
+
+        self.iterate_lsystem();
+        self.draw_lsystem();
+    }
+
     /// Notify scene that the  drawing parameters have changed
     pub fn refresh_drawing_parameters(&mut self) {
+        if !self.auto_refresh() {
+            return;
+        }
+
         self.lsystem.set_drawing_parameters(&self.lsystem_params.drawing_parameters);
         self.draw_lsystem();
     }
 
     pub fn refresh_iteration_depth(&mut self) {
+        if !self.auto_refresh() {
+            return;
+        }
+
         self.lsystem.set_iteration_depth(self.lsystem_params.iteration_depth);
         self.iterate_lsystem();
         self.draw_lsystem();
     }
 
     pub fn refresh_rules(&mut self) {
+        if !self.auto_refresh() {
+            return;
+        }
+
         self.apply_rules();
         self.iterate_lsystem();
         self.draw_lsystem();
     }
 
     pub fn refresh_interpretations(&mut self) {
+        if !self.auto_refresh() {
+            return;
+        }
+
         self.apply_interpretations();
         self.iterate_lsystem();
         self.draw_lsystem();

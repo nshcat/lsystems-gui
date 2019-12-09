@@ -1,6 +1,7 @@
 use serde::*;
 #[macro_use]
 use serde_derive::*;
+use serde_json::*;
 use std::string::*;
 use std::collections::*;
 use nalgebra_glm::Vec3;
@@ -16,6 +17,27 @@ pub mod presets;
 pub struct Interpretation {
 	pub symbol: Option<char>,
 	pub operation: DrawOperation
+}
+
+/// Struct containing application-wide settings
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ApplicationSettings {
+	/// Whether the displayed LSystem should be refreshed on parameter change.
+	pub auto_refresh: bool
+}
+
+impl ApplicationSettings {
+	/// The default settings
+	pub fn default_settings() -> ApplicationSettings {
+		ApplicationSettings {
+			auto_refresh: true
+		}
+	}
+
+	/// Read a new instance from JSON string.
+	pub fn from_string(input: &str) -> ApplicationSettings {
+		serde_json::from_str(input).expect("Failed to read ApplicationSettings from JSON")
+	}
 }
 
 /// A struct containing all the information that describes a single LSystem.
@@ -37,6 +59,13 @@ pub struct LSystemParameters {
 	/// gui rendering.
 	pub interpretations: Vec<Interpretation>,
 	pub color_palette: Vec<Vec3>
+}
+
+impl LSystemParameters {
+	/// Read a new instance from JSON string.
+	pub fn from_string(input: &str) -> LSystemParameters {
+		serde_json::from_str(input).expect("Failed to read LSystemParameters from JSON")
+	}
 }
 
 

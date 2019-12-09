@@ -4,6 +4,15 @@ use crate::data::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::DrawOperation;
 
+/// Show a help marker that shows a tooltip with given message on hover-over.
+/// Taken from the imgui demo window source code.
+fn help_marker(ui: &Ui, text: &ImStr) {
+    ui.text_disabled(im_str!("(?)"));
+    if ui.is_item_hovered() {
+        ui.tooltip_text(text);
+    }
+}
+
 pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemManager) {
     ImWindow::new(im_str!("LSystem Parameters"))
             .size([450.0, 550.0], Condition::FirstUseEver)
@@ -30,6 +39,14 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemManager) {
                     .build() {
                     ui.indent();
                     do_interpretations(ui, lsystem);
+                    ui.unindent();
+                }
+
+                if ui.collapsing_header(im_str!("Application Settings"))
+                    .default_open(true)
+                    .build() {
+                    ui.indent();
+                    do_app_settings(ui, lsystem);
                     ui.unindent();
                 }
             });
@@ -335,4 +352,18 @@ pub fn do_debug_gui(ui: &Ui) {
                 ));
                 
             });
+}
+
+fn do_app_settings(ui: &Ui, lsystem: &mut LSystemManager) {
+    ui.checkbox(im_str!("Auto refresh"), &mut lsystem.app_settings.auto_refresh);
+
+    if !lsystem.app_settings.auto_refresh {
+        ui.same_line_with_spacing(0.0, 30.0);
+        if ui.button(im_str!("Reload"), [0.0, 0.0]) {
+            lsystem.force_refresh_all();
+        }
+    } else {
+        ui.same_line(0.0);
+        help_marker(ui, im_str!("Auto refresh can make editing large L-Systems rather slow. Consider disabling the option when dealing with big systems."))
+    }
 }

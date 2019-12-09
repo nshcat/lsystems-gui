@@ -15,6 +15,7 @@ mod data;
 mod scene;
 mod gui;
 
+use crate::data::*;
 use crate::scene::*;
 
 fn main() {
@@ -65,7 +66,7 @@ fn main() {
     let mut show_menu = true;
 
     // ======== Scene setup =================
-    let mut scene = LSystemManager::new(&from_str(data::presets::PENROSE).unwrap());
+    let mut scene = LSystemManager::new(&LSystemParameters::from_string(data::presets::PENROSE), &ApplicationSettings::default_settings());
     // ======================================
 
     viewport.enable();
@@ -114,4 +115,6 @@ fn main() {
             }
         }
     }
+
+    // Clean up
 }
