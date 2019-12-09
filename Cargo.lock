@@ -217,8 +217,8 @@ dependencies = [
 
 [[package]]
 name = "lsystems-core"
-version = "0.1.6"
-source = "git+https://github.com/nshcat/lsystems-core#fd14be807a83a8a0a0522817ce04f54129d70437"
+version = "0.1.7"
+source = "git+https://github.com/nshcat/lsystems-core#0dc053e5ff9e99134c298aa41de6ad170f60a63d"
 dependencies = [
  "nalgebra 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "peg 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -235,7 +235,7 @@ dependencies = [
  "glfw 0.34.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui-glfw-rs 0.4.2 (git+https://github.com/nshcat/imgui-glfw-rs)",
- "lsystems-core 0.1.6 (git+https://github.com/nshcat/lsystems-core)",
+ "lsystems-core 0.1.7 (git+https://github.com/nshcat/lsystems-core)",
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "nalgebra-glm 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -626,7 +626,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum libm 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
 "checksum lock_api 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e57b3997725d2b60dbec1297f6c2e2957cc383db1cebd6be812163f969c7d586"
 "checksum log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)" = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"
-"checksum lsystems-core 0.1.6 (git+https://github.com/nshcat/lsystems-core)" = "<none>"
+"checksum lsystems-core 0.1.7 (git+https://github.com/nshcat/lsystems-core)" = "<none>"
 "checksum malloc_buf 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 "checksum maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 "checksum matrixmultiply 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d4f7ec66360130972f34830bfad9ef05c6610a43938a467bcc9ab9369ab3478f"

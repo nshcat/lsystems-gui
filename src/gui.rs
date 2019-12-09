@@ -1,6 +1,7 @@
-use imgui::{StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
+use imgui::{ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use crate::scene::*;
 use lsystems_core::drawing::types::*;
+use lsystems_core::drawing::DrawOperation;
 
 pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemManager) {
     ImWindow::new(im_str!("LSystem Parameters"))
@@ -17,7 +18,153 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemManager) {
                     do_rules(ui, lsystem);
                     ui.unindent();
                 }
+
+                if ui.collapsing_header(im_str!("Interpretation Map")).build() {
+                    ui.indent();
+                    do_interpretations(ui, lsystem);
+                    ui.unindent();
+                }
             });
+}
+
+fn draw_operations() -> Vec<&'static ImStr> {
+    vec![
+        im_str!("Forward"),
+        im_str!("ForwardNoDraw"),
+        im_str!( "TurnRight"),
+        im_str!("TurnLeft"),
+        im_str!("SaveState"),
+        im_str!("LoadState"),
+        im_str!("Ignore"),
+        im_str!("ForwardContracting"),
+        im_str!("PitchDown"),
+        im_str!("PitchUp"),
+        im_str!("RollLeft"),
+        im_str!("RollRight"),
+        im_str!("TurnAround"),
+        im_str!("BeginPolygon"),
+        im_str!("EndPolygon"),
+        im_str!("SubmitVertex"),
+        im_str!("IncrementColor"),
+        im_str!("DecrementColor"),
+        im_str!("IncrementLineWidth"),
+        im_str!("DecrementLineWidth"),
+    ]
+}
+
+fn index_to_operation(index: usize) -> DrawOperation {
+    match index {
+        0 => DrawOperation::Forward,
+        1 => DrawOperation::ForwardNoDraw,
+        2 => DrawOperation::TurnRight,
+        3 => DrawOperation::TurnLeft,
+        4 => DrawOperation::SaveState,
+        5 => DrawOperation::LoadState,
+        6 => DrawOperation::Ignore,
+        7 => DrawOperation::ForwardContracting,
+        8 => DrawOperation::PitchDown,
+        9 => DrawOperation::PitchUp,
+        10 => DrawOperation::RollLeft,
+        11 => DrawOperation::RollRight,
+        12 => DrawOperation::TurnAround,
+        13 => DrawOperation::BeginPolygon,
+        14 => DrawOperation::EndPolygon,
+        15 => DrawOperation::SubmitVertex,
+        16 => DrawOperation::IncrementColor,
+        17 => DrawOperation::DecrementColor,
+        18 => DrawOperation::IncrementLineWidth,
+        19 => DrawOperation::DecrementLineWidth,
+        _ => panic!("Unknown draw operation value")
+    }
+}
+
+fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
+    let mut modified = false;
+
+    let params = &mut lsystem.lsystem_params;
+
+    let mut to_change: Option<(char, Option<(char, DrawOperation)>)> = None;
+
+    for (i, (symbol, op)) in params.interpretations.iter().enumerate() {
+        let id = ui.push_id(i as i32);
+
+        let mut symbol_str = ImString::with_capacity(16);
+        symbol_str.push_str(&symbol.to_string());
+
+        let token = ui.push_item_width(20.0);
+
+        if ui.input_text(im_str!("##sym"), &mut symbol_str).build() {
+            if symbol_str.to_str().len() > 0 {
+                to_change = Some((*symbol, Some((symbol_str.to_str().chars().next().unwrap(), *op))));
+            } else {
+                to_change = Some((*symbol, None));
+            }
+
+            modified = true;
+        }
+
+        token.pop(ui);
+
+        ui.same_line(0.0);
+        ui.text(im_str!("->"));
+        ui.same_line(0.0);
+        let mut current_item: i32 = *op as _;
+        let items = draw_operations();
+
+        if ui.combo(im_str!("##op"), &mut current_item, &items, 5) {
+            to_change = Some((*symbol, Some((*symbol, index_to_operation(current_item as _)))));
+            modified = true;
+        }
+
+        let colors = ui.push_style_colors(&[
+            (StyleColor::Button, [0.6, 0.239, 0.239, 1.0]),
+            (StyleColor::ButtonHovered, [0.7, 0.2117, 0.2117, 1.0]),
+            (StyleColor::ButtonActive, [0.8, 0.1607, 0.1607, 1.0])
+        ]);
+
+        ui.same_line(0.0);
+
+        if ui.button(im_str!("-"), [0.0, 0.0]) {
+            modified = true;
+            to_change = Some((*symbol, None));
+        }
+        
+        colors.pop(ui);
+
+        id.pop(ui);
+    }  
+
+    match to_change {
+        Some((oldsym, Some((newsym, op)))) => {
+            if params.interpretations.contains_key(&oldsym) {
+                params.interpretations.remove(&oldsym).unwrap();
+            }
+
+            params.interpretations.insert(newsym, op);
+        },
+        Some((oldsym, None)) => {
+            params.interpretations.remove(&oldsym).unwrap();
+        },
+        _ => {}
+    };
+
+
+    let colors = ui.push_style_colors(&[
+        (StyleColor::Button, [0.349, 0.6, 0.239, 1.0]),
+        (StyleColor::ButtonHovered, [0.3568, 0.7019, 0.2117, 1.0]),
+        (StyleColor::ButtonActive, [0.3529, 0.8, 0.1607, 1.0])
+    ]);
+
+    if ui.button(im_str!("+"), [0.0, 0.0]) {
+        params.interpretations.insert(' ', DrawOperation::Forward);
+        modified = true;
+    }
+
+    colors.pop(ui);
+
+    if modified {
+        lsystem.refresh_interpretations();
+    }
 }
 
 fn do_rules(ui: &Ui, lsystem: &mut LSystemManager) {
@@ -75,7 +222,7 @@ fn do_rules(ui: &Ui, lsystem: &mut LSystemManager) {
         params.rules.push(String::new());
         modified = true;
     }
-    
+
     colors.pop(ui);
 
 

@@ -62,7 +62,22 @@ impl LSystemManager {
         self.draw_lsystem();
     }
 
-    /// Apply axiom and rules stored in the lsystem parameters to current lsystem instance
+    pub fn refresh_interpretations(&mut self) {
+        self.apply_interpretations();
+        self.iterate_lsystem();
+        self.draw_lsystem();
+    }
+
+    /// Apply interpretations in the lsystem parameters to the current lsystem instance
+    fn apply_interpretations(&mut self) {
+        self.lsystem.interpretations.clear();
+
+        for (symbol, op) in &self.lsystem_params.interpretations {
+            self.lsystem.interpretations.associate(*symbol, *op);
+        }
+    }
+
+    /// Apply axiom and rules stored in the lsystem parameters to the current lsystem instance
     fn apply_rules(&mut self) {
         self.lsystem.parse(&self.lsystem_params.axiom, &self.lsystem_params.rules.join("\n"));
     }
