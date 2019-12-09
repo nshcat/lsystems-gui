@@ -5,6 +5,7 @@ os: windows
 
 script:
   - cargo build --release
+  - ls
 
 deploy:
   provider: releases
