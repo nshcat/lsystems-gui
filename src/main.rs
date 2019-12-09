@@ -115,6 +115,4 @@ fn main() {
             }
         }
     }
-
-    // Clean up
 }
