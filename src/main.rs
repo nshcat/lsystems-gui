@@ -23,7 +23,7 @@ fn main() {
 
     let (mut window, events) = glfw
         .create_window(
-            1024,
+            1420,
             768,
             "lsystems-gui",
             glfw::WindowMode::Windowed,
@@ -82,7 +82,7 @@ fn main() {
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
 
         // DRAW GUI ===
-        ui.show_demo_window(&mut true);
+        //ui.show_demo_window(&mut true);
         gui::do_debug_gui(&ui);
         gui::do_lsystem_params_gui(&ui, &mut scene);
         // ============

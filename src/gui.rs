@@ -5,21 +5,28 @@ use lsystems_core::drawing::DrawOperation;
 
 pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemManager) {
     ImWindow::new(im_str!("LSystem Parameters"))
-            .size([300.0, 100.0], Condition::FirstUseEver)
+            .size([450.0, 550.0], Condition::FirstUseEver)
+            .position([0.0, 60.0], Condition::FirstUseEver)
             .build(&ui, || {
-                if ui.collapsing_header(im_str!("Drawing Parameters")).build() {
+                if ui.collapsing_header(im_str!("Drawing Parameters"))
+                    .default_open(true)
+                    .build() {
                     ui.indent();
                     do_drawing_parameters(ui, lsystem);
                     ui.unindent();
                 }
 
-                if ui.collapsing_header(im_str!("Rules")).build() {
+                if ui.collapsing_header(im_str!("Rules"))
+                    .default_open(true)
+                    .build() {
                     ui.indent();
                     do_rules(ui, lsystem);
                     ui.unindent();
                 }
 
-                if ui.collapsing_header(im_str!("Interpretation Map")).build() {
+                if ui.collapsing_header(im_str!("Interpretation Map"))
+                    .default_open(true)
+                    .build() {
                     ui.indent();
                     do_interpretations(ui, lsystem);
                     ui.unindent();
