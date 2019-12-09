@@ -9,6 +9,15 @@ use lsystems_core::drawing::{DrawingParameters, DrawOperation};
 
 pub mod presets;
 
+/// A special structure used to represent a single interpretation mapping.
+/// This is only used with the GUI, and the Option allows the user to have interpretations
+/// with an empty symbol field, which improves UX.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Interpretation {
+	pub symbol: Option<char>,
+	pub operation: DrawOperation
+}
+
 /// A struct containing all the information that describes a single LSystem.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LSystemParameters {
@@ -23,7 +32,10 @@ pub struct LSystemParameters {
 	pub seed: u64,
 	pub iteration_depth: u32,
 	pub rules: Vec<String>,
-	pub interpretations: HashMap<char, DrawOperation>,
+	/// The usage of a Vec instead of a associative container is done in order to preserve
+	/// order of interpretations and thus obtain some degree of consistency when it comes to
+	/// gui rendering.
+	pub interpretations: Vec<Interpretation>,
 	pub color_palette: Vec<Vec3>
 }
 

@@ -1,5 +1,6 @@
 use imgui::{ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use crate::scene::*;
+use crate::data::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::DrawOperation;
 
@@ -90,21 +91,25 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
 
     let params = &mut lsystem.lsystem_params;
 
-    let mut to_change: Option<(char, Option<(char, DrawOperation)>)> = None;
+    let mut to_delete: Option<usize> = None;
 
-    for (i, (symbol, op)) in params.interpretations.iter().enumerate() {
+    for (i, interp) in params.interpretations.iter_mut().enumerate() {
         let id = ui.push_id(i as i32);
 
         let mut symbol_str = ImString::with_capacity(16);
-        symbol_str.push_str(&symbol.to_string());
+
+        if let Some(symbol) = interp.symbol {
+            symbol_str.push_str(&symbol.to_string());
+        }
 
         let token = ui.push_item_width(20.0);
 
         if ui.input_text(im_str!("##sym"), &mut symbol_str).build() {
-            if symbol_str.to_str().len() > 0 {
-                to_change = Some((*symbol, Some((symbol_str.to_str().chars().next().unwrap(), *op))));
+            let trimmed = symbol_str.to_str().trim();
+            if trimmed.is_empty() {
+                interp.symbol = None;
             } else {
-                to_change = Some((*symbol, None));
+                interp.symbol = Some(trimmed.chars().next().unwrap());
             }
 
             modified = true;
@@ -115,11 +120,12 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
         ui.same_line(0.0);
         ui.text(im_str!("->"));
         ui.same_line(0.0);
-        let mut current_item: i32 = *op as _;
+        let mut current_item: i32 = interp.operation as _;
         let items = draw_operations();
 
         if ui.combo(im_str!("##op"), &mut current_item, &items, 5) {
-            to_change = Some((*symbol, Some((*symbol, index_to_operation(current_item as _)))));
+            let new_operation = index_to_operation(current_item as _);
+            interp.operation = new_operation;
             modified = true;
         }
 
@@ -133,7 +139,7 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
 
         if ui.button(im_str!("-"), [0.0, 0.0]) {
             modified = true;
-            to_change = Some((*symbol, None));
+            to_delete = Some(i);
         }
         
         colors.pop(ui);
@@ -141,17 +147,10 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
         id.pop(ui);
     }  
 
-    match to_change {
-        Some((oldsym, Some((newsym, op)))) => {
-            if params.interpretations.contains_key(&oldsym) {
-                params.interpretations.remove(&oldsym).unwrap();
-            }
-
-            params.interpretations.insert(newsym, op);
-        },
-        Some((oldsym, None)) => {
-            params.interpretations.remove(&oldsym).unwrap();
-        },
+    match to_delete {
+        Some(i) => {
+            params.interpretations.remove(i);
+        }
         _ => {}
     };
 
@@ -163,7 +162,14 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
     ]);
 
     if ui.button(im_str!("+"), [0.0, 0.0]) {
-        params.interpretations.insert(' ', DrawOperation::Forward);
+        params.interpretations.push(
+            Interpretation{
+                symbol: None,
+                operation: DrawOperation::Forward
+            }
+        );
+
+        println!("Added new interp, size is now {}", params.interpretations.len());
         modified = true;
     }
 

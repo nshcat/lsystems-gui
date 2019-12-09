@@ -72,8 +72,10 @@ impl LSystemManager {
     fn apply_interpretations(&mut self) {
         self.lsystem.interpretations.clear();
 
-        for (symbol, op) in &self.lsystem_params.interpretations {
-            self.lsystem.interpretations.associate(*symbol, *op);
+        for interpretation in &self.lsystem_params.interpretations {
+            if let Some(symbol) = interpretation.symbol {
+                self.lsystem.interpretations.associate(symbol, interpretation.operation);
+            }
         }
     }
 
@@ -102,8 +104,10 @@ impl LSystemManager {
         lsystem.parse(&params.axiom, &params.rules.join("\n"));
         lsystem.engine.set_seed(params.seed);
 
-        for (character, action) in &params.interpretations {
-            lsystem.interpretations.associate(*character, *action);
+        for interp in &params.interpretations {
+            if let Some(symbol) = interp.symbol {
+                lsystem.interpretations.associate(symbol, interp.operation);
+            }
         }
     }
 

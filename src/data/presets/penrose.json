@@ -26,16 +26,40 @@
 	"9 -> --81++++61[+91++++71]--71",
 	"1 -> "
   ],
-  "interpretations": {
-    "6": "Forward",
-	"7": "Forward",
-	"8": "Forward",
-	"9": "Forward",
-    "+": "TurnRight",
-    "-": "TurnLeft",
-	"[": "SaveState",
-	"]": "LoadState"
-  },
+  "interpretations": [
+    {
+      "symbol": "6",
+      "operation": "Forward"
+    },
+    {
+      "symbol": "7",
+      "operation": "Forward"
+    },
+    {
+      "symbol": "8",
+      "operation": "Forward"
+    },
+    {
+      "symbol": "9",
+      "operation": "Forward"
+    },
+    {
+      "symbol": "+",
+      "operation": "TurnRight"
+    },
+    {
+      "symbol": "-",
+      "operation": "TurnLeft"
+    },
+    {
+      "symbol": "[",
+      "operation": "SaveState"
+    },
+    {
+      "symbol": "]",
+      "operation": "LoadState"
+    }
+  ],
   "color_palette": []
 }
 

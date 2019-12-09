@@ -22,11 +22,20 @@
   "rules": [
     "F -> F+F--F+F"
   ],
-  "interpretations": {
-    "F": "Forward",
-    "+": "TurnRight",
-    "-": "TurnLeft"
-  },
+  "interpretations": [
+    {
+      "symbol": "F",
+      "operation": "Forward"
+    },
+    {
+      "symbol": "+",
+      "operation": "TurnRight"
+    },
+    {
+      "symbol": "-",
+      "operation": "TurnLeft"
+    },
+  ],
   "color_palette": []
 }
 
