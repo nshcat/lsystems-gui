@@ -1,32 +1,20 @@
-
-use lsystems_core::*;
-use lsystems_core::drawing::types::*;
-use lsystems_core::drawing::{DrawOperation, DrawingParameters};
 use glfw::{Action, Key, Context, WindowEvent::Size, SwapInterval};
 use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
 use imgui_glfw_rs::imgui;
 use imgui_glfw_rs::ImguiGLFW;
 use serde_json::*;
-use nalgebra_glm::{Mat4, Vec3};
 
-#[macro_use]
-use maplit::*;
 
-use rendering::shaders::{Shader, ShaderType, Program};
-use rendering::uniforms::*;
-use rendering::buffers::*;
-use rendering::meshes::*;
 use rendering::traits::*;
-use rendering::materials::*;
 use rendering::camera::*;
-use rendering::{RenderParameters, Viewport};
+use rendering::{Viewport};
 
 mod rendering;
 mod data;
 mod scene;
+mod gui;
 
-use crate::data::LSystemParameters;
 use crate::scene::*;
 
 fn main() {
@@ -93,17 +81,11 @@ fn main() {
 
         let ui = imgui_glfw.frame(&mut window, &mut imgui);
 
-        ImWindow::new(im_str!("Meow"))
-            .size([300.0, 100.0], Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(im_str!("Hello world!"));
-                ui.separator();
-                let fps = ui.io().framerate;
-                ui.text(format!(
-                    "FPS: {:.1}",
-                    fps
-                ));
-            });
+        // DRAW GUI ===
+        ui.show_demo_window(&mut true);
+        gui::do_debug_gui(&ui);
+        gui::do_lsystem_params_gui(&ui, &mut scene);
+        // ============
 
         imgui_glfw.draw(ui, &mut window);
 

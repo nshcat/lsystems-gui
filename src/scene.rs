@@ -44,6 +44,41 @@ impl LSystemManager {
         }
     }
 
+    /// Notify scene that the  drawing parameters have changed
+    pub fn refresh_drawing_parameters(&mut self) {
+        self.lsystem.set_drawing_parameters(&self.lsystem_params.drawing_parameters);
+        self.draw_lsystem();
+    }
+
+    pub fn refresh_iteration_depth(&mut self) {
+        self.lsystem.set_iteration_depth(self.lsystem_params.iteration_depth);
+        self.iterate_lsystem();
+        self.draw_lsystem();
+    }
+
+    pub fn refresh_rules(&mut self) {
+        self.apply_rules();
+        self.iterate_lsystem();
+        self.draw_lsystem();
+    }
+
+    /// Apply axiom and rules stored in the lsystem parameters to current lsystem instance
+    fn apply_rules(&mut self) {
+        self.lsystem.parse(&self.lsystem_params.axiom, &self.lsystem_params.rules.join("\n"));
+    }
+
+    /// Fully reiterate the lsystem. This is necessary if the iteration depth, the axiom or one or more 
+    /// rules changed.
+    fn iterate_lsystem(&mut self) {
+        self.lsystem.iterate();
+    }
+
+    /// Draw the lsystem, which means interpreting it and retrieving all scene objects from it
+    fn draw_lsystem(&mut self) {
+        self.lsystem.interpret();
+        self.lines_mesh = Self::retrieve_line_mesh(&self.lsystem, &self.lsystem_params);
+    }
+
     /// Setup new lsystem instance using given parameters. This will not start
     /// iteration!
     fn setup_lsystem(lsystem: &mut LSystem, params: &LSystemParameters) {
