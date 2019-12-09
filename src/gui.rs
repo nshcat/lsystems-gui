@@ -93,6 +93,10 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
 
     let mut to_delete: Option<usize> = None;
 
+    // We need to push an outer ID here since we are using buttons with the same identifiers as the ones
+    // used to remove and add rules.
+    let outer_id = ui.push_id(2);
+
     for (i, interp) in params.interpretations.iter_mut().enumerate() {
         let id = ui.push_id(i as i32);
 
@@ -138,13 +142,14 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
         ui.same_line(0.0);
 
         if ui.button(im_str!("-"), [0.0, 0.0]) {
+            println!("To delete: {}", i);
             modified = true;
             to_delete = Some(i);
         }
         
         colors.pop(ui);
 
-        id.pop(ui);
+        id.pop(ui);     
     }  
 
     match to_delete {
@@ -174,6 +179,7 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
     }
 
     colors.pop(ui);
+    outer_id.pop(ui);
 
     if modified {
         lsystem.refresh_interpretations();
