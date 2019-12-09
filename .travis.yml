@@ -11,6 +11,7 @@ deploy:
   api_key:
     secure: J/eGYx8RrItCApBHIFiHdqdSKmSCHkH7RiunbUirPuP3kFLHa/9IufKmc++rrCwux79HLtoMpxGyKMwJcH0UW6a0394IpOHwyRCEooNOpuNwk4/bjhsdVNI1ay45o5H6G7YUF6Kgnf6kFUW6cYi3jx/9LakT0gPtL8b8sF8zAX1z0m8SIIzoTkROZqeBIImoEiWxHMuPA4t/V/bQmRSbpRBMbNj2N7C6lYgsEYmXs6Z7dSsMe3v5OM1yfq+VruyvuvSodYNSJsr5cY62X/hSeUFxeuC25lii86qLdklJL2EvkFwHWpQYLap7EEOI0Io3hz1zCJRQgUFyaXW9CN7H5pyn0dRO+0WLMp7orqhOUFtiCw6wH9EEesanpHCuF06DPkWh90UzYgvTpmeC1/DkAS3YfO/1CwZEzJPmUsKW/MPZkR3prhPnmRpaK071SjBUdQ4FrmH4nWEenbuMOrPH6P7MzK7bC+gGOoWj/hACjqPJLhZBFe9jSicpdR34TsWszsVUGaTnDOzJIg3pg6sBr0Oek7N/CvLoQAYEnYUc7LHV0FyaLPiZbQGHa3W+oSXqlepbfJvuhL7r5KLODexLRz45qGl+nnOvTGmKhUJM1wVWBUln4gXumrkRN1pXU1rsAjcvmiq9V2rC0vVRFhLyPXWB8vyioTbE4hE/uPuGuDY=
   file: target/release/lsystems-gui.exe
+  skip_cleanup: true
   draft: true
   on:
     #repo: nshcat/lsystems-gui
