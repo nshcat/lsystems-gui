@@ -2,6 +2,7 @@ use ncollide3d::bounding_volume::*;
 use nalgebra_glm::*;
 use nalgebra::*;
 use std::any::*;
+use gl::*;
 
 use crate::rendering::shaders::*;
 use crate::rendering::materials::*;
