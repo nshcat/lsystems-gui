@@ -23,14 +23,24 @@ pub struct Interpretation {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ApplicationSettings {
 	/// Whether the displayed LSystem should be refreshed on parameter change.
-	pub auto_refresh: bool
+	pub auto_refresh: bool,
+	/// Whether to draw the bounding box around the lsystem
+	pub draw_bounding_box: bool,
+	/// Whether to automatically center camera on lsystem center on reload
+	pub auto_center_camera: bool,
+	/// Whether to additionally adjust the camera radius in order to have the full system in view.
+	/// Is only relevant if auto centering is active.
+	pub auto_adjust_radius: bool
 }
 
 impl ApplicationSettings {
 	/// The default settings
 	pub fn default_settings() -> ApplicationSettings {
 		ApplicationSettings {
-			auto_refresh: true
+			auto_refresh: true,
+			draw_bounding_box: false,
+			auto_center_camera: true,
+			auto_adjust_radius: true
 		}
 	}
 

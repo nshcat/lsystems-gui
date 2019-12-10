@@ -207,6 +207,19 @@ impl Camera {
         }
     }
 
+    pub fn recenter(&mut self, center: &Vec3) {
+        self.state.target = center.clone();
+        self.update_state();
+        self.update_view();
+    }
+
+    pub fn set_radius(&mut self, radius: f64) {
+        self.radius = radius;
+
+        self.update_state();
+        self.update_view();
+    }
+
     /// Check if camera is currently being dragged by the user
     pub fn dragging(&self) -> bool {
         self.is_dragging

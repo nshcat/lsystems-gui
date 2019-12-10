@@ -13,7 +13,7 @@ fn help_marker(ui: &Ui, text: &ImStr) {
     }
 }
 
-pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemManager) {
+pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
     ImWindow::new(im_str!("LSystem Parameters"))
             .size([450.0, 550.0], Condition::FirstUseEver)
             .position([0.0, 60.0], Condition::FirstUseEver)
@@ -103,7 +103,7 @@ fn index_to_operation(index: usize) -> DrawOperation {
     }
 }
 
-fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
+fn do_interpretations(ui: &Ui, lsystem: &mut LSystemScene) {
     let mut modified = false;
 
     let params = &mut lsystem.lsystem_params;
@@ -203,7 +203,7 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemManager) {
     }
 }
 
-fn do_rules(ui: &Ui, lsystem: &mut LSystemManager) {
+fn do_rules(ui: &Ui, lsystem: &mut LSystemScene) {
     let mut modified = false;
     let params = &mut lsystem.lsystem_params;
 
@@ -278,7 +278,7 @@ fn do_rules(ui: &Ui, lsystem: &mut LSystemManager) {
     }
 }
 
-fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemManager) {  
+fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemScene) {  
     {
         let mut modified = false;
         let params = &mut lsystem.lsystem_params.drawing_parameters;
@@ -354,7 +354,7 @@ pub fn do_debug_gui(ui: &Ui) {
             });
 }
 
-fn do_app_settings(ui: &Ui, lsystem: &mut LSystemManager) {
+fn do_app_settings(ui: &Ui, lsystem: &mut LSystemScene) {
     ui.checkbox(im_str!("Auto refresh"), &mut lsystem.app_settings.auto_refresh);
 
     if !lsystem.app_settings.auto_refresh {
@@ -365,5 +365,22 @@ fn do_app_settings(ui: &Ui, lsystem: &mut LSystemManager) {
     } else {
         ui.same_line(0.0);
         help_marker(ui, im_str!("Auto refresh can make editing large L-Systems rather slow. Consider disabling the option when dealing with big systems."))
+    }
+
+    ui.checkbox(im_str!("Draw bounding box"), &mut lsystem.app_settings.draw_bounding_box);
+
+    ui.checkbox(im_str!("Center camera on reload"), &mut lsystem.app_settings.auto_center_camera);
+    ui.same_line(0.0);
+    help_marker(ui, im_str!("Causes the camera to be focused on the center of the L-System's bounding box on reload, which makes rotation more enjoyable."));
+    ui.same_line_with_spacing(0.0, 30.0);
+    if ui.button(im_str!("Center"), [0.0, 0.0]) {
+        lsystem.center_camera();
+    }
+
+    if lsystem.app_settings.auto_center_camera {
+        ui.indent();
+        ui.checkbox(im_str!("Also adjust camera zoom"), &mut lsystem.app_settings.auto_adjust_radius);ui.same_line(0.0);
+        help_marker(ui, im_str!("This will adjust the zoom level to always have the whole L-System in view."));    
+        ui.unindent();
     }
 }

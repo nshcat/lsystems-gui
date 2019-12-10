@@ -393,6 +393,32 @@ impl Mesh {
         mesh
     }
 
+    /// Retrieve downcasted material reference
+    pub fn retrieve_material_ref<T: Material + 'static>(&self) -> &T {
+        let rf = &*self.material;
+        let any_rf = rf.as_any();
+
+        let concrete_ref: & T = match any_rf.downcast_ref::<T>() {
+            Some(a) => a,
+            None => panic!("retrieve_material_ref: Type mismatch!"),
+        };
+
+        concrete_ref
+    }
+
+    /// Retrieve mutable downcasted material reference
+    pub fn retrieve_material_mut_ref<T: Material + 'static>(&mut self) -> &mut T {
+        let rf = &mut *self.material;
+        let any_rf = rf.as_mut_any();
+
+        let concrete_ref: &mut T = match any_rf.downcast_mut::<T>() {
+            Some(a) => a,
+            None => panic!("retrieve_material_mut_ref: Type mismatch!"),
+        };
+
+        concrete_ref
+    }
+
     /// Try to retrieve the total vertex count for given set of attributes.
     /// This can fail if the number of entries in each of the attribute arrays is not the same.
     fn retrieve_vertex_count(attributes: &Vec<&dyn AttributeArrayBase>) -> Option<usize> {

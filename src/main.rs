@@ -1,3 +1,6 @@
+use std::rc::*;
+use std::cell::*;
+
 use glfw::{Action, Key, Context, WindowEvent::Size, SwapInterval};
 use imgui::{Condition, Context as ImContext, Window as ImWindow, im_str};
 use imgui_glfw_rs::glfw;
@@ -53,10 +56,10 @@ fn main() {
 
         viewport = Viewport::for_window(w as _, h as _);
 
-        camera = Camera::new(
+        camera = Rc::new(RefCell::new(Camera::new(
             w as _, h as _,
             ProjectionType::Perspective(75.0)
-        );
+        )));
     }
 
     let mut imgui = ImContext::create();
@@ -66,7 +69,7 @@ fn main() {
     let mut show_menu = true;
 
     // ======== Scene setup =================
-    let mut scene = LSystemManager::new(&LSystemParameters::from_string(data::presets::PENROSE), &ApplicationSettings::default_settings());
+    let mut scene = LSystemScene::new(&LSystemParameters::from_string(data::presets::PENROSE), &ApplicationSettings::default_settings(), camera.clone());
     // ======================================
 
     viewport.enable();
@@ -76,7 +79,7 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
 
-        let mut params = camera.to_render_parameters();
+        let mut params = camera.borrow().to_render_parameters();
 
         scene.render(&mut params);
 
@@ -98,7 +101,7 @@ fn main() {
 
             // Only pass events to camera is imgui does not capture them
             if !imgui.io().want_capture_mouse && !imgui.io().want_capture_keyboard {
-                camera.handle_event(&window, &event);
+                camera.borrow_mut().handle_event(&window, &event);
             }
 
             match event {
@@ -109,7 +112,7 @@ fn main() {
                     viewport.update(w as _, h as _);
                     viewport.enable();
 
-                    camera.update(w as _, h as _);
+                    camera.borrow_mut().update(w as _, h as _);
                 },
                 _ => {},
             }

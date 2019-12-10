@@ -1,4 +1,5 @@
 use gl::types::*;
+use std::any::*;
 use crate::rendering::RenderParameters;
 use crate::rendering::shaders::Program;
 use crate::rendering::uniforms::*;
@@ -13,6 +14,10 @@ pub trait Material {
     /// This function will cause all matrices to be extracted from the provided render parameters, as well
     /// as all shader-specific uniforms 
     fn enable_material(&self, params: &mut RenderParameters);
+    /// Retrieve this instance as a reference to Any. This is used for downcasting.
+    fn as_any(&self) -> &dyn Any;
+    /// Retrieve this instance as a mutable reference to Any. This is used for downcasting.
+    fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 
 
@@ -39,6 +44,16 @@ impl Material for SimpleMaterial {
         self.program.set_uniform_mat4("projection", &params.projection);
         self.program.set_uniform_mat4("view", &params.view);
         self.program.set_uniform_mat4("model", &params.model);
+    }
+
+    /// Retrieve this instance as a reference to Any. This is used for downcasting.
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    /// Retrieve this instance as a mutable reference to Any. This is used for downcasting.
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

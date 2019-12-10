@@ -1,20 +1,26 @@
+use std::rc::*;
+use std::cell::*;
+
+use nalgebra_glm::Vec3;
+
 use lsystems_core::*;
 use lsystems_core::drawing::*;
 use lsystems_core::drawing::primitives::*;
 use lsystems_core::drawing::types::*;
 
-use nalgebra_glm::Vec3;
-
 use crate::data::*;
-use crate::rendering::meshes::*;
 use crate::rendering::*;
+use crate::rendering::camera::*;
+use crate::rendering::meshes::*;
 use crate::rendering::materials::*;
 use crate::rendering::traits::*;
+use crate::scene::bounding_box::*;
 
+mod bounding_box;
 
 /// A struct managing the currently displayed LSystem and providing methods
 /// to update certain parts of it.
-pub struct LSystemManager {
+pub struct LSystemScene {
     /// The parameters describing the currently displayed LSystem.
     pub lsystem_params: LSystemParameters,
     /// The application settings
@@ -22,12 +28,16 @@ pub struct LSystemManager {
     /// The lsystem instance
     lsystem: LSystem,
     /// The mesh containing all lines of the lsystem
-    lines_mesh: Mesh
+    lines_mesh: Mesh,
+    /// The bounding box around the lsystem
+    bounding_box: BoundingBox,
+    /// The camera looking into the scene
+    camera: Rc<RefCell<Camera>>
 }
 
-impl LSystemManager {
+impl LSystemScene {
     /// Create LSystem manager instance with given initial lsystem
-    pub fn new(params: &LSystemParameters, settings: &ApplicationSettings) -> LSystemManager {
+    pub fn new(params: &LSystemParameters, settings: &ApplicationSettings, camera: Rc<RefCell<Camera>>) -> LSystemScene {
         let mut lsystem = LSystem::new();
 
         Self::setup_lsystem(&mut lsystem, params);
@@ -36,19 +46,59 @@ impl LSystemManager {
         lsystem.interpret();
 
         let mesh = Self::retrieve_line_mesh(&lsystem, params);
+        let bb = Self::calculate_bounding_box(&lsystem);
 
-        LSystemManager{
+        let mut scene = LSystemScene{
             lsystem_params: params.clone(),
             app_settings: settings.clone(),
             lines_mesh: mesh,
-            lsystem
+            lsystem,
+            bounding_box: bb,
+            camera
+        };
+
+        if settings.auto_center_camera {
+            scene.center_camera();
         }
+
+        scene
+    }
+
+    /// Calculate bounding box from given lsystem
+    fn calculate_bounding_box(lsystem: &LSystem) -> BoundingBox {
+        // Collect vertices
+        let mut vertices = Vec::new();
+
+        // Convert LSystem-Core vector to GLM vector
+        fn convert_vector(vec: &Vector3f) -> Vec3 {
+            Vec3::new(vec.x as _, vec.y as _, vec.z as _)
+        }
+
+        for line in &lsystem.line_segments {
+            vertices.push(convert_vector(&line.begin));
+            vertices.push(convert_vector(&line.end));
+        }
+
+        BoundingBox::new(&vertices)
     }
 
     /// Shortcut to auto refresh settings value
     fn auto_refresh(&self) -> bool {
         self.app_settings.auto_refresh
     }
+
+    /// Center camera on lsystem with proper radius
+    pub fn center_camera(&mut self) {
+        // Determine the center
+        let center = self.bounding_box.aabb.center().coords;
+        self.camera.borrow_mut().recenter(&center);
+
+        // Adjust zoom level if requested
+        if self.app_settings.auto_adjust_radius {
+            self.camera.borrow_mut().set_radius(self.bounding_box.radius());
+        }
+    }
+
 
 
     pub fn force_refresh_all(&mut self) {
@@ -59,6 +109,11 @@ impl LSystemManager {
 
         self.iterate_lsystem();
         self.draw_lsystem();
+    }
+
+    /// Redraw the bounding box. Should be called when the lsystem was newly drawn.
+    fn draw_bounding_box(&mut self) {
+        self.bounding_box = Self::calculate_bounding_box(&self.lsystem);
     }
 
     /// Notify scene that the  drawing parameters have changed
@@ -127,6 +182,12 @@ impl LSystemManager {
     fn draw_lsystem(&mut self) {
         self.lsystem.interpret();
         self.lines_mesh = Self::retrieve_line_mesh(&self.lsystem, &self.lsystem_params);
+        self.draw_bounding_box();
+
+        // Since we redrew the lsystem, recenter camera if requested by the user
+        if self.app_settings.auto_center_camera {
+            self.center_camera();
+        }
     }
 
     /// Setup new lsystem instance using given parameters. This will not start
@@ -182,9 +243,13 @@ impl LSystemManager {
     }
 }
 
-impl Render for LSystemManager {
+impl Render for LSystemScene {
     /// Render lsystem to screen
     fn render(&self, params: &mut RenderParameters) {
         self.lines_mesh.render(params);
+
+        if self.app_settings.draw_bounding_box {
+            self.bounding_box.render(params);
+        }
     }
 }
