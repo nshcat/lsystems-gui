@@ -46,7 +46,7 @@ impl LSystemScene {
         lsystem.interpret();
 
         let mesh = Self::retrieve_line_mesh(&lsystem, params);
-        let bb = Self::calculate_bounding_box(&lsystem);
+        let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
 
         let mut scene = LSystemScene{
             lsystem_params: params.clone(),
@@ -65,7 +65,7 @@ impl LSystemScene {
     }
 
     /// Calculate bounding box from given lsystem
-    fn calculate_bounding_box(lsystem: &LSystem) -> BoundingBox {
+    fn calculate_bounding_box(color: &Vec3, lsystem: &LSystem) -> BoundingBox {
         // Collect vertices
         let mut vertices = Vec::new();
 
@@ -79,7 +79,7 @@ impl LSystemScene {
             vertices.push(convert_vector(&line.end));
         }
 
-        BoundingBox::new(&vertices)
+        BoundingBox::new(color, &vertices)
     }
 
     /// Shortcut to auto refresh settings value
@@ -113,7 +113,11 @@ impl LSystemScene {
 
     /// Redraw the bounding box. Should be called when the lsystem was newly drawn.
     fn draw_bounding_box(&mut self) {
-        self.bounding_box = Self::calculate_bounding_box(&self.lsystem);
+        self.bounding_box = Self::calculate_bounding_box(&self.app_settings.bounding_box_color, &self.lsystem);
+    }
+
+    pub fn refresh_bounding_box_color(&mut self) {
+        self.bounding_box.set_color(&self.app_settings.bounding_box_color);
     }
 
     /// Notify scene that the  drawing parameters have changed

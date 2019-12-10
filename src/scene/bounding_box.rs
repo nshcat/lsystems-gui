@@ -82,7 +82,7 @@ pub struct BoundingBox {
 }
 
 impl BoundingBox {
-    pub fn new(vertices: &[Vec3]) -> BoundingBox {
+    pub fn new(color: &Vec3, vertices: &[Vec3]) -> BoundingBox {
         // The AABB sadly only accepts points, so we have to convert them.
         let points: Vec<Point3<f32>> = vertices
             .iter()
@@ -101,7 +101,7 @@ impl BoundingBox {
         // Create mesh
         let mesh = Mesh::new(
             PrimitiveType::Lines,
-            Box::new(BoundingBoxMaterial::new(&Vec3::new(1.0, 1.0, 1.0))),
+            Box::new(BoundingBoxMaterial::new(&color)),
             &BoundingBoxGeometry::new(&bx)
         );
 

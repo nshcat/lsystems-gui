@@ -30,7 +30,9 @@ pub struct ApplicationSettings {
 	pub auto_center_camera: bool,
 	/// Whether to additionally adjust the camera radius in order to have the full system in view.
 	/// Is only relevant if auto centering is active.
-	pub auto_adjust_radius: bool
+	pub auto_adjust_radius: bool,
+	/// The color of the bounding box wireframe
+	pub bounding_box_color: Vec3
 }
 
 impl ApplicationSettings {
@@ -40,7 +42,8 @@ impl ApplicationSettings {
 			auto_refresh: true,
 			draw_bounding_box: false,
 			auto_center_camera: true,
-			auto_adjust_radius: true
+			auto_adjust_radius: true,
+			bounding_box_color: Vec3::new(1.0, 1.0, 1.0)
 		}
 	}
 
