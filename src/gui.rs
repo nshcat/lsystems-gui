@@ -1,4 +1,4 @@
-use imgui::{EditableColor, ColorEdit, ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
+use imgui::{MenuItem, EditableColor, ColorEdit, ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use nalgebra_glm::Vec3;
 use crate::scene::*;
 use crate::data::*;
@@ -146,6 +146,37 @@ fn do_colors(ui: &Ui, lsystem: &mut LSystemScene) {
 
     if was_changed {
         lsystem.refresh_color_palette();
+    }
+}
+
+pub fn do_main_menu_bar(ui: &Ui, lsystem: &mut LSystemScene) {
+    if let Some(token) = ui.begin_main_menu_bar() {
+        do_file_menu(ui, lsystem);
+        token.end(ui);
+    }
+}
+
+fn do_file_menu(ui: &Ui, lsystem: &mut LSystemScene) {
+    if let Some(token) = ui.begin_menu(im_str!("File"), true) {
+        if MenuItem::new(im_str!("New"))
+            .shortcut(im_str!("      Ctrl+N"))
+            .build(ui) {
+                
+        }
+
+        if MenuItem::new(im_str!("Open"))
+            .shortcut(im_str!("      Ctrl+O"))
+            .build(ui) {
+
+        }
+
+        if MenuItem::new(im_str!("Save"))
+            .shortcut(im_str!("      Ctrl+S"))
+            .build(ui) {
+            
+        }
+
+        token.end(ui);
     }
 }
 

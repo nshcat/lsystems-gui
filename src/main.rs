@@ -87,8 +87,9 @@ fn main() {
 
         // DRAW GUI ===
         //ui.show_demo_window(&mut true);
-        gui::do_debug_gui(&ui);
+        //gui::do_debug_gui(&ui);
         gui::do_lsystem_params_gui(&ui, &mut scene);
+        gui::do_main_menu_bar(&ui, &mut scene);
         // ============
 
         imgui_glfw.draw(ui, &mut window);
