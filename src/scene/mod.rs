@@ -288,7 +288,7 @@ impl LSystemScene {
             }
 
             let mat = Box::new(SimpleMaterial::new());
-            let geometry = BasicGeometry::from_vertices(&vertices);
+            let geometry = BasicGeometry::with_auto_normals(PrimitiveType::TriangleFan, &vertices);
 
             meshes.push(Mesh::new(PrimitiveType::TriangleFan, mat, &geometry));
         }

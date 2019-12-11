@@ -9,14 +9,16 @@ use crate::rendering::types::{GlHandle};
 #[repr(u32)]
 pub enum ShaderType {
     FragmentShader = gl::FRAGMENT_SHADER,
-    VertexShader = gl::VERTEX_SHADER
+    VertexShader = gl::VERTEX_SHADER,
+    GeometryShader = gl::GEOMETRY_SHADER
 }
 
 impl Display for ShaderType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             ShaderType::FragmentShader => write!(f, "fragment shader"),
-            ShaderType::VertexShader => write!(f, "vertex shader")
+            ShaderType::VertexShader => write!(f, "vertex shader"),
+            ShaderType::GeometryShader => write!(f, "geometry shader")
         }
     }
 }
@@ -50,6 +52,18 @@ pub struct Shader {
 }
 
 impl Shader {
+    pub fn new_geometry(source: &str) -> Result<Shader, ProgramError> {
+        Self::from_source(source, ShaderType::GeometryShader)
+    }
+
+    pub fn new_vertex(source: &str) -> Result<Shader, ProgramError> {
+        Self::from_source(source, ShaderType::VertexShader)
+    }
+
+    pub fn new_fragment(source: &str) -> Result<Shader, ProgramError> {
+        Self::from_source(source, ShaderType::FragmentShader)
+    }
+
     pub fn from_source(source: &str, ty: ShaderType) -> Result<Shader, ProgramError> {
         unsafe {
             // Create empty shader object
@@ -103,10 +117,6 @@ impl Drop for Shader {
 /// A struct representing an OpenGL program object, which consists of a fragment shader
 /// and a vertex shader.
 pub struct Program {
-    /// The fragment shader instance
-    fragment: Shader,
-    /// The vertex shader instance
-    vertex: Shader,
     /// The program object handle
     pub handle: GlHandle
 }
@@ -114,7 +124,7 @@ pub struct Program {
 /// Creation
 impl Program {
     /// Create a new shader program from existing shader objects.
-    pub fn from_shaders(vs: Shader, fs: Shader) -> Result<Program, ProgramError> {
+    pub fn from_shaders(shaders: &mut [Shader]) -> Result<Program, ProgramError> {
         unsafe {
             let handle = gl::CreateProgram();
 
@@ -122,8 +132,12 @@ impl Program {
                 return Err(ProgramError::GenericError("Failed to create program object"));
             }
 
-            gl::AttachShader(handle, vs.handle);
-            gl::AttachShader(handle, fs.handle);
+            // We intentionally move the shaders objects into the block here. 
+            // They will be dropped afterwards. This is okay according to OpenGL spec.
+            for shader in shaders {
+                gl::AttachShader(handle, shader.handle);
+            }
+
             gl::LinkProgram(handle);
 
             let mut link_status: GLint = 0;
@@ -148,12 +162,15 @@ impl Program {
                 }
             } else {
                 return Ok(Program {
-                    handle: handle,
-                    fragment: fs,
-                    vertex: vs
+                    handle: handle
                 })
             }
         }
+    }
+
+    /// Create a new shader program from given vertex and fragment shader.
+    pub fn from_vertex_fragment_shader(vs: Shader, fs: Shader) -> Result<Program, ProgramError> {
+        Self::from_shaders(&mut vec![vs, fs])
     }
 
     /// Create a new shader program from vertex and fragment shader source code.
@@ -172,7 +189,7 @@ impl Program {
             _ => ()
         }
 
-        Self::from_shaders(vs.unwrap(), fs.unwrap())
+        Self::from_vertex_fragment_shader(vs.unwrap(), fs.unwrap())
     }
 }
 
