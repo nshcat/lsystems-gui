@@ -1,9 +1,12 @@
 use imgui::{MenuItem, EditableColor, ColorEdit, ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use nalgebra_glm::Vec3;
 use crate::scene::*;
+use crate::data;
 use crate::data::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::DrawOperation;
+use nfd::*;
+use std::fs::*;
 
 /// Show a help marker that shows a tooltip with given message on hover-over.
 /// Taken from the imgui demo window source code.
@@ -136,6 +139,14 @@ fn index_to_operation(index: usize) -> DrawOperation {
     }
 }
 
+fn save_text_file(path: &str, contents: &str) {
+    write(path, contents).expect("Unable to write file");
+}
+
+fn load_text_file(path: &str) -> String {
+    read_to_string(path).expect("Unable to read file")
+}
+
 fn do_colors(ui: &Ui, lsystem: &mut LSystemScene) {
     let mut was_changed = false;
     for (i, color) in &mut lsystem.lsystem_params.color_palette.iter_mut().enumerate() {
@@ -152,6 +163,32 @@ fn do_colors(ui: &Ui, lsystem: &mut LSystemScene) {
 pub fn do_main_menu_bar(ui: &Ui, lsystem: &mut LSystemScene) {
     if let Some(token) = ui.begin_main_menu_bar() {
         do_file_menu(ui, lsystem);
+        do_presets(ui, lsystem);
+        token.end(ui);
+    }
+}
+
+fn do_presets(ui: &Ui, lsystem: &mut LSystemScene) {
+    if let Some(token) = ui.begin_menu(im_str!("Examples"), true) {
+        MenuItem::new(im_str!("2D"))
+            .enabled(false)
+            .build(ui);
+
+        if MenuItem::new(im_str!("Koch Snowflake")).build(ui) {
+            lsystem.load(data::presets::KOCH_SNOWFLAKE);
+        }
+
+        if MenuItem::new(im_str!("Penrose")).build(ui) {
+            lsystem.load(data::presets::PENROSE);
+        }
+
+
+        ui.separator();
+
+        MenuItem::new(im_str!("3D"))
+            .enabled(false)
+            .build(ui);
+
         token.end(ui);
     }
 }
@@ -161,19 +198,45 @@ fn do_file_menu(ui: &Ui, lsystem: &mut LSystemScene) {
         if MenuItem::new(im_str!("New"))
             .shortcut(im_str!("      Ctrl+N"))
             .build(ui) {
-                
+                lsystem.load(data::presets::EMPTY);
         }
 
         if MenuItem::new(im_str!("Open"))
             .shortcut(im_str!("      Ctrl+O"))
             .build(ui) {
+                let result = nfd::open_file_dialog(Some("json"), None).unwrap_or_else(|e| {
+                    panic!(e);
+                });
 
+                match result {
+                    Response::Okay(path) => {
+                        let json = load_text_file(&path);
+                        lsystem.load(&json);
+                    },
+                    Response::OkayMultiple(paths) => {
+                        let json = load_text_file(&paths.iter().next().unwrap());
+                        lsystem.load(&json);
+                    },
+                    // User canceled
+                    _ => {}
+                }
         }
 
         if MenuItem::new(im_str!("Save"))
             .shortcut(im_str!("      Ctrl+S"))
             .build(ui) {
-            
+                let result = nfd::open_save_dialog(Some("json"), None).unwrap_or_else(|e| {
+                    panic!(e);
+                });
+
+                match result {
+                    Response::Okay(path) => {
+                        let json = lsystem.save();
+                        save_text_file(&path, &json);
+                    },
+                    // User canceled, and multiple cant ever happen here
+                    _ => {}
+                }
         }
 
         token.end(ui);

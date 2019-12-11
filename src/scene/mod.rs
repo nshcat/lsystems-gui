@@ -8,6 +8,8 @@ use lsystems_core::drawing::*;
 use lsystems_core::drawing::primitives::*;
 use lsystems_core::drawing::types::*;
 
+use serde_json::*;
+
 use crate::data::*;
 use crate::rendering::*;
 use crate::rendering::camera::*;
@@ -246,6 +248,26 @@ impl LSystemScene {
                 lsystem.interpretations.associate(symbol, interp.operation);
             }
         }
+    }
+
+    /// Load lsystem parameters from JSON string.
+    pub fn load(&mut self, json_str: &str) {
+        let params = from_str::<LSystemParameters>(json_str);
+
+        match params {
+            Ok(params) => {
+                self.lsystem_params = params;
+                self.force_refresh_all();
+            }
+            Err(e) => {
+                println!("Could not load given JSON string as LSystem parameters: {}", e);
+            }
+        };
+    }
+
+    /// Save lsystem parameters to JSON string.
+    pub fn save(&mut self) -> String {
+        to_string_pretty(&self.lsystem_params).unwrap()
     }
 
     /// Create line mesh from interpreted lsystem
