@@ -74,6 +74,14 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
                     do_app_settings(ui, lsystem);
                     ui.unindent();
                 }
+
+                if ui.collapsing_header(im_str!("Debug Options"))
+                    .default_open(false)
+                    .build() {
+                    ui.indent();
+                    do_debug_options(ui, lsystem);
+                    ui.unindent();
+                }
             });
 }
 
@@ -138,6 +146,16 @@ fn do_colors(ui: &Ui, lsystem: &mut LSystemScene) {
 
     if was_changed {
         lsystem.refresh_color_palette();
+    }
+}
+
+fn do_debug_options(ui: &Ui, lsystem: &mut LSystemScene) {
+    if ui.checkbox(im_str!("Show normal vectors"), &mut lsystem.app_settings.show_normals) {
+        lsystem.refresh_meshes();
+    }
+
+    if ui.checkbox(im_str!("Draw polygons as wireframe"), &mut lsystem.app_settings.draw_wireframe) {
+        lsystem.refresh_wireframe_flag();
     }
 }
 

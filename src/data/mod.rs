@@ -32,7 +32,11 @@ pub struct ApplicationSettings {
 	/// Is only relevant if auto centering is active.
 	pub auto_adjust_radius: bool,
 	/// The color of the bounding box wireframe
-	pub bounding_box_color: Vec3
+	pub bounding_box_color: Vec3,
+	/// Whether to show the normal vectors of polygons (debug feature)
+	pub show_normals: bool,
+	/// Whether to draw polygons as wireframes (debug features)
+	pub draw_wireframe: bool
 }
 
 impl ApplicationSettings {
@@ -43,7 +47,9 @@ impl ApplicationSettings {
 			draw_bounding_box: false,
 			auto_center_camera: true,
 			auto_adjust_radius: true,
-			bounding_box_color: Vec3::new(1.0, 1.0, 1.0)
+			bounding_box_color: Vec3::new(1.0, 1.0, 1.0),
+			show_normals: false,
+			draw_wireframe: false
 		}
 	}
 

@@ -479,7 +479,9 @@ pub struct Mesh {
     /// Associated material trait object
     material: Box<dyn Material>,
     /// Number of vertices supplied
-    num_vertices: usize
+    num_vertices: usize,
+    /// Whether to draw this mesh as a wireframe
+    pub draw_wireframe: bool
 }
 
 impl Mesh {
@@ -492,6 +494,7 @@ impl Mesh {
             material: mat,
             vao: VertexArray::new(),
             buffers: Vec::new(),
+            draw_wireframe: false,
             num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent")
         };
 
@@ -562,7 +565,17 @@ impl Render for Mesh {
         self.vao.enable_array();
 
         unsafe{
-            gl::DrawArrays(self.primitive_type as _, 0, self.num_vertices as _);
+            if self.draw_wireframe {
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+            }
+
+            
+                gl::DrawArrays(self.primitive_type as _, 0, self.num_vertices as _);
+            
+
+            if self.draw_wireframe {
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            }
         }
 
         self.vao.disable_array();

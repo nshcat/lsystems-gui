@@ -60,7 +60,7 @@ impl Material for SimpleMaterial {
 /// Shader source code
 impl SimpleMaterial {
     /// The vertex shader source for this material
-    pub const VERTEX_SHADER_SOURCE: &'static str = r#"
+    const VERTEX_SHADER_SOURCE: &'static str = r#"
         #version 330 core
 
         layout (location = 0) in vec3 Position;

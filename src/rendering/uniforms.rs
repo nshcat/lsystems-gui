@@ -34,6 +34,19 @@ impl Program {
         }
     }
 
+    /// Set f32 uniform on this program object
+    pub fn set_uniform_float(&self, name: &str, value: f32) {
+        let loc = self.query_location(name);
+
+        unsafe {
+            gl::Uniform1fv(
+                loc,
+                1,
+                &value as *const f32 as *const _
+            );
+        }
+    }
+
     /// Retrieve uniform location for given name string
     fn query_location(&self, name: &str) -> GLint {
         unsafe {

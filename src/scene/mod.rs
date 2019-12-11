@@ -15,8 +15,10 @@ use crate::rendering::meshes::*;
 use crate::rendering::materials::*;
 use crate::rendering::traits::*;
 use crate::scene::bounding_box::*;
+use crate::scene::normal_test_material::*;
 
 mod bounding_box;
+mod normal_test_material;
 
 /// A struct managing the currently displayed LSystem and providing methods
 /// to update certain parts of it.
@@ -47,7 +49,7 @@ impl LSystemScene {
         lsystem.iterate();
         lsystem.interpret();
 
-        let poly_meshes = Self::retrieve_polygon_meshes(&lsystem, params);
+        let poly_meshes = Self::retrieve_polygon_meshes(&lsystem, params, settings);
         let mesh = Self::retrieve_line_mesh(&lsystem, params);
         let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
 
@@ -63,7 +65,7 @@ impl LSystemScene {
 
         if settings.auto_center_camera {
             scene.center_camera();
-        }
+        } 
 
         scene
     }
@@ -208,13 +210,26 @@ impl LSystemScene {
     /// Draw the lsystem, which means interpreting it and retrieving all scene objects from it
     fn draw_lsystem(&mut self) {
         self.lsystem.interpret();
-        self.lines_mesh = Self::retrieve_line_mesh(&self.lsystem, &self.lsystem_params);
-        self.polygon_meshes = Self::retrieve_polygon_meshes(&self.lsystem, &self.lsystem_params);
+        self.refresh_meshes();
         self.draw_bounding_box();
 
         // Since we redrew the lsystem, recenter camera if requested by the user
         if self.app_settings.auto_center_camera {
             self.center_camera();
+        }
+    }
+
+    /// Does not redraw lsystem, just recreates the meshes. Needed if mesh data changes, such as debug settings
+    /// or the color palette entries.
+    pub fn refresh_meshes(&mut self) {
+        self.lines_mesh = Self::retrieve_line_mesh(&self.lsystem, &self.lsystem_params);
+        self.polygon_meshes = Self::retrieve_polygon_meshes(&self.lsystem, &self.lsystem_params, &self.app_settings);
+    }
+
+    /// Notify scene that the wireframe setting has changed
+    pub fn refresh_wireframe_flag(&mut self) {
+        for mesh in &mut self.polygon_meshes {
+            mesh.draw_wireframe = self.app_settings.draw_wireframe;
         }
     }
 
@@ -270,7 +285,7 @@ impl LSystemScene {
         Mesh::new(PrimitiveType::Lines, mat, &BasicGeometry::from_vertices(&vertices))
     }
 
-    fn retrieve_polygon_meshes(lsystem: &LSystem, params: &LSystemParameters) -> Vec<Mesh> {
+    fn retrieve_polygon_meshes(lsystem: &LSystem, params: &LSystemParameters, settings: &ApplicationSettings) -> Vec<Mesh> {
         let mut meshes = Vec::new();
 
         for polygon in &lsystem.polygons {
@@ -289,8 +304,16 @@ impl LSystemScene {
 
             let mat = Box::new(SimpleMaterial::new());
             let geometry = BasicGeometry::with_auto_normals(PrimitiveType::TriangleFan, &vertices);
+            let mut mesh = Mesh::new(PrimitiveType::TriangleFan, mat, &geometry);
+            mesh.draw_wireframe = settings.draw_wireframe;
+            meshes.push(mesh);
 
-            meshes.push(Mesh::new(PrimitiveType::TriangleFan, mat, &geometry));
+            if settings.show_normals {
+                let mat = Box::new(NormalTestMaterial::new((params.drawing_parameters.step/2.0) as _, &Vec3::new(1.0, 1.0, 0.0)));
+                let mut mesh = Mesh::new(PrimitiveType::TriangleStrip, mat, &geometry);
+                mesh.draw_wireframe = settings.draw_wireframe;
+                meshes.push(mesh);
+            }
         }
 
         meshes
