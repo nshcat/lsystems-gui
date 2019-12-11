@@ -14,6 +14,22 @@ fn help_marker(ui: &Ui, text: &ImStr) {
     }
 }
 
+fn do_color_palette_entry(ui: &Ui, value: &mut Vec3, idx: usize) -> bool {
+    let outer_id = ui.push_id(idx as i32);
+    
+    let mut color: [f32; 3] = [value.x, value.y, value.z];
+
+    let mut changed = false;
+    if ColorEdit::new(im_str!(""), &mut color).build(ui) {
+        let new_color = Vec3::new(color[0], color[1], color[2]);
+        *value = new_color;
+        changed = true;
+    }
+
+    outer_id.pop(ui);
+    return changed;
+}
+
 pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
     ImWindow::new(im_str!("LSystem Parameters"))
             .size([450.0, 550.0], Condition::FirstUseEver)
@@ -40,6 +56,14 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
                     .build() {
                     ui.indent();
                     do_interpretations(ui, lsystem);
+                    ui.unindent();
+                }
+
+                if ui.collapsing_header(im_str!("Color Palette"))
+                    .default_open(false)
+                    .build() {
+                    ui.indent();
+                    do_colors(ui, lsystem);
                     ui.unindent();
                 }
 
@@ -101,6 +125,19 @@ fn index_to_operation(index: usize) -> DrawOperation {
         18 => DrawOperation::IncrementLineWidth,
         19 => DrawOperation::DecrementLineWidth,
         _ => panic!("Unknown draw operation value")
+    }
+}
+
+fn do_colors(ui: &Ui, lsystem: &mut LSystemScene) {
+    let mut was_changed = false;
+    for (i, color) in &mut lsystem.lsystem_params.color_palette.iter_mut().enumerate() {
+        if do_color_palette_entry(ui, color, i) {
+            was_changed = true;
+        }
+    }
+
+    if was_changed {
+        lsystem.refresh_color_palette();
     }
 }
 

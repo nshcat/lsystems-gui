@@ -8,7 +8,7 @@
     "start_angle": 0.959931,
     "angle_delta": 0.628319,
     "step": 0.1,
-    "color_palette_size": 1,
+    "color_palette_size": 3,
     "initial_line_width": 1.0,
     "line_width_delta": 0.1
   },
@@ -60,6 +60,22 @@
       "operation": "LoadState"
     }
   ],
-  "color_palette": []
+  "color_palette": [
+    [
+      1.0,
+      1.0,
+      1.0
+    ],
+    [
+      1.0,
+      1.0,
+      1.0
+    ],
+    [
+      1.0,
+      1.0,
+      1.0
+    ]
+  ]
 }
 
