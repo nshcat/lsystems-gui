@@ -24,7 +24,7 @@
 */
 
 
-use nalgebra_glm::{Vec3, Mat4};
+use nalgebra_glm::{Vec3, Mat4, UVec3};
 use std::mem::*;
 use std::any::Any;
 use gl::types::*;
@@ -290,6 +290,103 @@ impl DynamicGeometry for ExtendableBasicGeometry {
     }
 }
 
+/// Struct bundling functions that allow automatic generation of normal vectors.
+/// This only works for triangle meshes.
+pub struct NormalGenerator;
+
+impl NormalGenerator {
+    /// Determine all faces of the geometry. This returns vectors containg three indices
+    /// into the vertex slice.
+    fn calculate_faces(pt: PrimitiveType, num_vertices: usize) -> Vec<UVec3> {
+        // At least three vertices are required
+        if num_vertices < 3 {
+            panic!("Expected at least three vertices, found {}", num_vertices);
+        }
+        
+        let mut faces = Vec::new();
+
+        match pt {
+            // Triangle fans contain triangles that all share the same root vertex, which 
+            // always is the vertex with index 0.
+            PrimitiveType::TriangleFan => {
+                for i in 2..num_vertices {
+                    faces.push(UVec3::new(0_u32, (i-1) as _, i as _));
+                }
+            },
+            // Unconnected triangle soup, which means that each vertex is only used exactly once.
+            PrimitiveType::Triangles => {
+                if num_vertices % 3 != 0 {
+                    panic!("Can't create faces for given vertex count: not multiple of 3");
+                }
+
+                for i in (0..num_vertices).step_by(3) {
+                    faces.push(UVec3::new(i as _, (i+1) as _, (i+2) as _));
+                }
+            },
+            // A strip uses a sliding window of width 3 to assign triangles to vertices.
+            PrimitiveType::TriangleStrip => {
+                for i in 2..num_vertices {
+                    faces.push(UVec3::new((i-2) as _, (i-1) as _, i as _));
+                }
+            },
+            _ => panic!("Primitive type not supported by calculate_faces!")
+        };
+
+        faces
+    }
+
+    /// Generates normal vectors for given geometry faces.
+    fn generate_face_normals(positions: &[Vec3], faces: &[UVec3]) -> Vec<Vec3> {
+        let mut face_normals = Vec::with_capacity(faces.len());
+
+        for face in faces {
+            let vA = &positions[face.x as usize];
+            let vB = &positions[face.y as usize];
+            let vC = &positions[face.z as usize];
+
+            let cb = vC - vB;
+            let ab = vA - vB;
+
+            let normal = cb.cross(&ab).normalize();
+
+            face_normals.push(normal);
+        }
+
+        face_normals
+    }
+
+    /// Generate vertex normals for given vertices interpreted as given primitive type
+    pub fn generate_normals(pt: PrimitiveType, positions: &[Vec3]) -> Vec<Vec3> {
+        // Create sequence of empty normal vectors
+        let mut normals = Vec::with_capacity(positions.len());
+
+        for _ in 0..positions.len() {
+            normals.push(Vec3::zeros());
+        }
+
+        // Determine faces
+        let faces = Self::calculate_faces(pt, positions.len());
+
+        // Calculate face normals
+        let face_normals = Self::generate_face_normals(positions, &faces);
+
+        // For each face, add the normal vector to each of its participating vertices
+        for (i, face) in faces.iter().enumerate() {
+            let normal = face_normals[i];
+
+            normals[face.x as usize] += normal;
+            normals[face.y as usize] += normal;
+            normals[face.z as usize] += normal;
+        }
+
+        // Finally, the normal vectors need to be normalized
+        for i in 0..normals.len() {
+            *normals[i] = *normals[i].normalize();
+        }
+
+        normals
+    }
+}
 
 /// A struct storing vertex information for basic drawing operations: position, color and
 /// normal vector.
@@ -317,6 +414,25 @@ impl BasicGeometry {
             geometry.colors.local_buffer.push(v.color);
             geometry.normals.local_buffer.push(v.normal);
         }
+
+        geometry
+    }
+
+    /// Construct geometry from given slice of vertices, and automatically generate normal vectors. 
+    /// If normal vectors are already present they will be discarded.
+    pub fn with_auto_normals(pt: PrimitiveType, vertices: &[Vertex]) -> BasicGeometry {
+        let mut geometry = BasicGeometry {
+            positions: AttributeArray::with_capacity(0, "position", vertices.len()),
+            colors: AttributeArray::with_capacity(1, "color", vertices.len()),
+            normals: AttributeArray::new(2, "normal")
+        };
+
+        for v in vertices {
+            geometry.positions.local_buffer.push(v.position);
+            geometry.colors.local_buffer.push(v.color);
+        }
+
+        geometry.normals.local_buffer = NormalGenerator::generate_normals(pt, &geometry.positions.local_buffer);
 
         geometry
     }
