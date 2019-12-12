@@ -91,25 +91,25 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
 fn draw_operations() -> Vec<&'static ImStr> {
     vec![
         im_str!("Forward"),
-        im_str!("ForwardNoDraw"),
-        im_str!( "TurnRight"),
-        im_str!("TurnLeft"),
-        im_str!("SaveState"),
-        im_str!("LoadState"),
+        im_str!("Forward (no draw)"),
+        im_str!("Turn Right"),
+        im_str!("Turn Left"),
+        im_str!("Save State"),
+        im_str!("Load State"),
         im_str!("Ignore"),
-        im_str!("ForwardContracting"),
-        im_str!("PitchDown"),
-        im_str!("PitchUp"),
-        im_str!("RollLeft"),
-        im_str!("RollRight"),
-        im_str!("TurnAround"),
-        im_str!("BeginPolygon"),
-        im_str!("EndPolygon"),
-        im_str!("SubmitVertex"),
-        im_str!("IncrementColor"),
-        im_str!("DecrementColor"),
-        im_str!("IncrementLineWidth"),
-        im_str!("DecrementLineWidth"),
+        im_str!("Forward (contracting)"),
+        im_str!("Pitch Down"),
+        im_str!("Pitch Up"),
+        im_str!("Roll Left"),
+        im_str!("Roll Right"),
+        im_str!("Turn Around"),
+        im_str!("Begin Polygon"),
+        im_str!("End Polygon"),
+        im_str!("Submit Vertex"),
+        im_str!("Increment Color"),
+        im_str!("Decrement Color"),
+        im_str!("Increment Line Width"),
+        im_str!("Decrement Line Width"),
     ]
 }
 
@@ -294,7 +294,7 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemScene) {
         let mut current_item: i32 = interp.operation as _;
         let items = draw_operations();
 
-        if ui.combo(im_str!("##op"), &mut current_item, &items, 5) {
+        if ui.combo(im_str!("##op"), &mut current_item, &items, 8) {
             let new_operation = index_to_operation(current_item as _);
             interp.operation = new_operation;
             modified = true;
