@@ -34,7 +34,7 @@ fn do_color_palette_entry(ui: &Ui, value: &mut Vec3, idx: usize) -> bool {
 }
 
 pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
-    ImWindow::new(im_str!("LSystem Parameters"))
+    ImWindow::new(&ImString::new(&lsystem.lsystem_params.name))
             .size([450.0, 550.0], Condition::FirstUseEver)
             .position([0.0, 60.0], Condition::FirstUseEver)
             .build(&ui, || {
