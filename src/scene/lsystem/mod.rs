@@ -49,9 +49,7 @@ pub struct LSystemScene {
     /// Screen width
     pub width: u32,
     /// Screen height
-    pub height: u32,
-
-    test_meshes: Vec<Mesh>
+    pub height: u32
 }
 
 impl LSystemScene {
@@ -68,31 +66,6 @@ impl LSystemScene {
         let mesh = Self::retrieve_line_mesh(&lsystem, params);
         let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
 
-        let mut test_mesh;
-        let mut test_mesh2;
-        {
-            let mat = Box::new(NormalTestMaterial::new(0.05, &Vec3::new(1.0, 1.0, 0.0)));
-            let mat2 = Box::new(SimpleMaterial::new());
-            let geometry = PlaneGeometry::with_displacement(
-                30, 30,
-                Vec3::new(0.35, 0.35, 0.35),
-                &|u, v| Vec3::new(u, v, ((u*10.0).sin()*(v*10.0).cos()) * 0.1)
-            );
-
-            test_mesh = Mesh::new_indexed(
-                PrimitiveType::TriangleStrip,
-                mat,
-                &geometry
-            );
-
-            test_mesh2 = Mesh::new_indexed(
-                PrimitiveType::TriangleStrip,
-                mat2,
-                &geometry
-            );
-        }
-
-
         let mut scene = LSystemScene{
             lsystem_params: params.clone(),
             app_settings: settings.clone(),
@@ -103,8 +76,7 @@ impl LSystemScene {
             camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
             model_to_refresh: None,
             width: w,
-            height: h,
-            test_meshes: vec![test_mesh, test_mesh2]
+            height: h
         };
 
         if settings.auto_center_camera {
@@ -410,10 +382,6 @@ impl Scene for LSystemScene {
         self.lines_mesh.render(&mut params);
 
         for mesh in &self.polygon_meshes {
-            mesh.render(&mut params);
-        }
-
-        for mesh in &self.test_meshes {
             mesh.render(&mut params);
         }
 

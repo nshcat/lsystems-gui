@@ -16,6 +16,24 @@ impl BezierCurveParameters {
             control_points: [Vec3::zeros(), Vec3::zeros(), Vec3::zeros(), Vec3::zeros()]
         }
     }
+
+    pub fn from_points(pts: [Vec3; 4]) -> BezierCurveParameters {
+        BezierCurveParameters {
+            control_points: pts
+        }
+    }
+
+    pub fn evaluate(&self, u: f32) -> Vec3 {
+        let b0 = (1.0 - u).powf(3.0);
+        let b1 = 3.0 * u * ((1.0 - u).powf(2.0));
+        let b2 = 3.0 * (u.powf(2.0)) * (1.0 - u);
+        let b3 = u.powf(3.0);
+
+        (self.control_points[0] * b0)
+        + (self.control_points[1] * b1)
+        + (self.control_points[2] * b2)
+        + (self.control_points[3] * b3)
+    }
 }
 
 /// A structure containing all data and settings to construct a 3D bicubic bezier
@@ -45,51 +63,14 @@ impl BezierPatchParameters {
         let curve2 = &self.curves[2];
         let curve3 = &self.curves[3];
 
-        type MatType = nalgebra::Matrix<f32, nalgebra::Dynamic, nalgebra::Dynamic, nalgebra::VecStorage<f32, nalgebra::Dynamic, nalgebra::Dynamic>>;
+        let pt0 = curve0.evaluate(u);
+        let pt1 = curve1.evaluate(u);
+        let pt2 = curve2.evaluate(u);
+        let pt3 = curve3.evaluate(u);
 
-        let GBx = MatType::from_row_slice(4, 4,
-            &[curve0.control_points[0].z, curve0.control_points[1].z, curve0.control_points[2].z, curve0.control_points[3].z, 
-            curve1.control_points[0].z, curve1.control_points[1].z, curve1.control_points[2].z, curve1.control_points[3].z, 
-            curve2.control_points[0].z, curve2.control_points[1].z, curve2.control_points[2].z, curve2.control_points[3].z, 
-            curve3.control_points[0].z, curve3.control_points[1].z, curve3.control_points[2].z, curve3.control_points[3].z]
-        );
-
-        let GBy = MatType::from_row_slice(4, 4,
-            &[curve0.control_points[0].y, curve0.control_points[1].y, curve0.control_points[2].y, curve0.control_points[3].y, 
-            curve1.control_points[0].y, curve1.control_points[1].y, curve1.control_points[2].y, curve1.control_points[3].y, 
-            curve2.control_points[0].y, curve2.control_points[1].y, curve2.control_points[2].y, curve2.control_points[3].y, 
-            curve3.control_points[0].y, curve3.control_points[1].y, curve3.control_points[2].y, curve3.control_points[3].y] 
-        );
-
-        let GBz = MatType::from_row_slice(4, 4,
-            &[curve0.control_points[0].z, curve0.control_points[1].z, curve0.control_points[2].z, curve0.control_points[3].z, 
-            curve1.control_points[0].z, curve1.control_points[1].z, curve1.control_points[2].z, curve1.control_points[3].z, 
-            curve2.control_points[0].z, curve2.control_points[1].z, curve2.control_points[2].z, curve2.control_points[3].z, 
-            curve3.control_points[0].z, curve3.control_points[1].z, curve3.control_points[2].z, curve3.control_points[3].z], 
-        );
-
-        let U = MatType::from_row_slice(1, 4,
-            &[u.powf(3.0), u.powf(2.0), u, 1.0]
-        );
-
-        let Vt = MatType::from_row_slice(4, 1,
-            &[v.powf(3.0), v.powf(2.0), v, 1.0]
-        );
-
-        let Mb = MatType::from_row_slice(4, 4,
-            &[  -1.0, 3.0, -3.0, 1.0,
-                3.0, -6.0, 3.0, 0.0,
-                -3.0, 3.0, 0.0, 0.0,
-                1.0, 0.0, 0.0, 0.0]
-        );
-
-        let Mbt = Mb.transpose();
-
-        let resultX = &U * &Mb * &GBx * &Mbt * &Vt;
-        let resultY = &U * &Mb * &GBy * &Mbt * &Vt;
-        let resultZ = &U * &Mb * &GBz * &Mbt * &Vt;
-
-        Vec3::new(resultX[0], resultY[0], resultZ[0])
+        let temp_curve = BezierCurveParameters::from_points([pt0, pt1, pt2, pt3]);
+        
+        temp_curve.evaluate(v)
     }
 }
 

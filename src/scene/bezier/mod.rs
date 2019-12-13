@@ -26,7 +26,11 @@ pub struct BezierEditorScene {
     /// Control curve visualisation
     control_curve_meshes: Vec<Mesh>,
     /// Point clouds approximating the patch (for debugging purposes)
-    patch_approximations: Vec<Mesh>
+    patch_approximations: Vec<Mesh>,
+    /// Whether to draw the point cloud approximation
+    draw_approximation: bool,
+    /// Whether to draw the control curves
+    draw_control_curves: bool,
 }
 
 impl BezierEditorScene {
@@ -39,7 +43,9 @@ impl BezierEditorScene {
             meshes: Vec::new(),
             control_point_meshes: Vec::new(),
             control_curve_meshes: Vec::new(),
-            patch_approximations: Vec::new()
+            patch_approximations: Vec::new(),
+            draw_approximation: true,
+            draw_control_curves: true
         };
 
         scene.refresh_meshes();
@@ -90,7 +96,6 @@ impl BezierEditorScene {
         let mat = Box::new(SimpleMaterial::new());
 
         let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &plane);
-        mesh.draw_wireframe = true;
         mesh
     }
 
@@ -178,12 +183,16 @@ impl Scene for BezierEditorScene {
             mesh.render(&mut rp);
         }
 
-        for mesh in &self.control_curve_meshes {
-            mesh.render(&mut rp);
+        if self.draw_control_curves {
+            for mesh in &self.control_curve_meshes {
+                mesh.render(&mut rp);
+            }
         }
 
-        for mesh in &self.patch_approximations {
-            mesh.render(&mut rp);
+        if self.draw_approximation {
+            for mesh in &self.patch_approximations {
+                mesh.render(&mut rp);
+            }
         }
     }
 
@@ -285,8 +294,13 @@ impl Scene for BezierEditorScene {
                     .build() {
                     ui.indent();          
 
+                    ui.checkbox(im_str!("Draw control curves"), &mut self.draw_control_curves);
+                    ui.checkbox(im_str!("Draw point cloud approximation"), &mut self.draw_approximation);
+
                     ui.unindent();
                 }
+
+                ui.spacing();
 
                 if ui.button(im_str!("Cancel"), [0.0, 0.0]) {
                     action = SceneAction::PopScene;

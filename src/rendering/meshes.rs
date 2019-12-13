@@ -558,8 +558,8 @@ impl PlaneGeometry {
                 let base = y * (cols+1);
 
                 for x in 0..=cols {
-                    let u = (x as f32) / (cols + 1) as f32;
-                    let v = (y as f32) / (rows + 1) as f32;
+                    let u = (x as f32) / (cols) as f32;
+                    let v = (y as f32) / (rows) as f32;
 
                     let newVertex = f(u, v);
                     vertices[(base + x) as usize] = newVertex;
