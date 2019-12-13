@@ -7,8 +7,13 @@ use std::collections::*;
 use nalgebra_glm::Vec3;
 use lsystems_core::*;
 use lsystems_core::drawing::{DrawingParameters, DrawOperation};
+use crate::data::patches::*;
+
 
 pub mod presets;
+pub mod patches;
+
+
 
 /// A special structure used to represent a single interpretation mapping.
 /// This is only used with the GUI, and the Option allows the user to have interpretations
@@ -86,6 +91,8 @@ impl LSystemParameters {
 		serde_json::from_str(input).expect("Failed to read LSystemParameters from JSON")
 	}
 }
+
+
 
 
 

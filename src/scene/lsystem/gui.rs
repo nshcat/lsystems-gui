@@ -1,6 +1,6 @@
 use imgui::{MenuItem, EditableColor, ColorEdit, ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use nalgebra_glm::Vec3;
-use crate::scene::*;
+use crate::scene::lsystem::*;
 use crate::data;
 use crate::data::*;
 use lsystems_core::drawing::types::*;
