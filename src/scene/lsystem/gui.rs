@@ -4,6 +4,7 @@ use crate::scene::lsystem::*;
 use crate::scene::*;
 use crate::scene::bezier::*;
 use crate::data;
+use crate::data::patches::*;
 use crate::data::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::DrawOperation;
@@ -74,6 +75,14 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) -> SceneAction
                     ui.unindent();
                 }
 
+                if ui.collapsing_header(im_str!("Bezier Patch Models"))
+                    .default_open(false)
+                    .build() {
+                    ui.indent();
+                    do_bezier_models(ui, lsystem, &mut action);
+                    ui.unindent();
+                }
+
                 if ui.collapsing_header(im_str!("Application Settings"))
                     .default_open(true)
                     .build() {
@@ -86,7 +95,7 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) -> SceneAction
                     .default_open(false)
                     .build() {
                     ui.indent();
-                    do_debug_options(ui, lsystem, &mut action);
+                    do_debug_options(ui, lsystem);
                     ui.unindent();
                 }
             });
@@ -117,6 +126,101 @@ fn draw_operations() -> Vec<&'static ImStr> {
         im_str!("Increment Line Width"),
         im_str!("Decrement Line Width"),
     ]
+}
+
+fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction) {
+
+    let mut modified = false;
+    let mut to_delete: Option<usize> = None;
+    let mut to_edit: Option<usize> = None;
+
+    // We need to push an outer ID here since we are using buttons with the same identifiers as the ones
+    // used to remove and add rules.
+    let outer_id = ui.push_id(4);
+
+    for (i, model) in system.lsystem_params.bezier_models.iter_mut().enumerate() {
+        let id = ui.push_id(i as i32);
+
+        let mut symbol_str = ImString::with_capacity(16);
+
+        if let Some(symbol) = model.symbol {
+            symbol_str.push_str(&symbol.to_string());
+        }
+
+        let token = ui.push_item_width(20.0);
+
+        if ui.input_text(im_str!("##sym"), &mut symbol_str).build() {
+            let trimmed = symbol_str.to_str().trim();
+            if trimmed.is_empty() {
+                model.symbol = None;
+            } else {
+                model.symbol = Some(trimmed.chars().next().unwrap());
+            }
+
+            modified = true;
+        }
+
+        token.pop(ui);
+
+        ui.same_line(0.0);
+
+        if ui.button(im_str!("edit"), [0.0, 0.0]) {
+            to_edit = Some(i);
+        }
+
+        let colors = ui.push_style_colors(&[
+            (StyleColor::Button, [0.6, 0.239, 0.239, 1.0]),
+            (StyleColor::ButtonHovered, [0.7, 0.2117, 0.2117, 1.0]),
+            (StyleColor::ButtonActive, [0.8, 0.1607, 0.1607, 1.0])
+        ]);
+
+        ui.same_line(0.0);
+
+        if ui.button(im_str!("-"), [0.0, 0.0]) {
+            modified = true;
+            to_delete = Some(i);
+        }
+        
+        colors.pop(ui);
+        /*  */
+
+        id.pop(ui);
+    }
+
+    match to_edit {
+        Some(i) => {
+            *action = SceneAction::PushScene(
+                make_rc_cell(
+                    BezierEditorScene::new(system.edit_bezier_model(i))
+                )
+            );
+        },
+        _ => {}
+    }
+
+    match to_delete {
+        Some(i) => {
+            system.lsystem_params.bezier_models.remove(i);
+        }
+        _ => {}
+    };
+
+
+    let colors = ui.push_style_colors(&[
+        (StyleColor::Button, [0.349, 0.6, 0.239, 1.0]),
+        (StyleColor::ButtonHovered, [0.3568, 0.7019, 0.2117, 1.0]),
+        (StyleColor::ButtonActive, [0.3529, 0.8, 0.1607, 1.0])
+    ]);
+
+    if ui.button(im_str!("+"), [0.0, 0.0]) {
+        system.lsystem_params.bezier_models.push(
+            BezierModelParameters::empty()
+        );
+        modified = true;
+    }
+
+    colors.pop(ui);
+    outer_id.pop(ui);
 }
 
 fn index_to_operation(index: usize) -> DrawOperation {
@@ -249,17 +353,13 @@ fn do_file_menu(ui: &Ui, lsystem: &mut LSystemScene) {
     }
 }
 
-fn do_debug_options(ui: &Ui, lsystem: &mut LSystemScene, action: &mut SceneAction) {
+fn do_debug_options(ui: &Ui, lsystem: &mut LSystemScene) {
     if ui.checkbox(im_str!("Show normal vectors"), &mut lsystem.app_settings.show_normals) {
         lsystem.refresh_meshes();
     }
 
     if ui.checkbox(im_str!("Draw polygons as wireframe"), &mut lsystem.app_settings.draw_wireframe) {
         lsystem.refresh_wireframe_flag();
-    }
-
-    if ui.button(im_str!("Switch to test scene"), [0.0, 0.0]) {
-        *action = SceneAction::PushScene(make_rc_cell(BezierEditorScene{}));
     }
 }
 

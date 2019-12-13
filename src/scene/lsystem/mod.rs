@@ -9,6 +9,7 @@ use lsystems_core::drawing::types::*;
 use serde_json::*;
 
 use crate::data::*;
+use crate::data::patches::*;
 use crate::rendering::*;
 use crate::rendering::camera::*;
 use crate::rendering::meshes::*;
@@ -38,7 +39,11 @@ pub struct LSystemScene {
     /// The bounding box around the lsystem. It might not exist, for example if there arent enough points.
     bounding_box: Option<BoundingBox>,
     /// The camera looking into the scene
-    camera: Camera
+    camera: Camera,
+    /// This option contains a reference shared with a BezierEditorScene instance that is running on top
+    /// of this scene in the SceneManager. If at any point, this scene gets evaluated and this is not None,
+    /// it contains the result of the editor scene and has to be handled.
+    model_to_refresh: Option<(usize, RcCell<BezierModelParameters>)>
 }
 
 impl LSystemScene {
@@ -62,7 +67,8 @@ impl LSystemScene {
             polygon_meshes: poly_meshes,
             lsystem,
             bounding_box: bb,
-            camera: Camera::new(w, h, ProjectionType::Perspective(75.0))
+            camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
+            model_to_refresh: None
         };
 
         if settings.auto_center_camera {
@@ -70,6 +76,19 @@ impl LSystemScene {
         } 
 
         scene
+    }
+
+    /// Mark the bezier model with given index as being "currently in edit mode".
+    /// This means that a EditBezierScene is going to be the active scene and modify
+    /// its contents.
+    pub fn edit_bezier_model(&mut self, index: usize) -> RcCell<BezierModelParameters> {
+        let model = self.lsystem_params.bezier_models[index].clone();
+
+        let cell = make_rc_cell(model);
+
+        self.model_to_refresh = Some((index, cell.clone()));
+
+        cell
     }
 
     /// Calculate bounding box from given lsystem
@@ -221,6 +240,10 @@ impl LSystemScene {
         }
     }
 
+    pub fn refresh_bezier_models(&mut self) {
+        /* TODO */
+    }
+
     /// Does not redraw lsystem, just recreates the meshes. Needed if mesh data changes, such as debug settings
     /// or the color palette entries.
     pub fn refresh_meshes(&mut self) {
@@ -358,6 +381,31 @@ impl Scene for LSystemScene {
             if self.app_settings.draw_bounding_box {
                 bb.render(&mut params);
             }
+        }
+    }
+
+    /// Perform logic. Currently, this means checking if a BezierEditorScene just ended, which would mean
+    /// that the modified model has to be applied to the parameters of the current lsystem.
+    fn do_logic(&mut self) {
+
+        let mut should_clear = false;
+
+        if let Some((i, r)) = &self.model_to_refresh {
+            // Retrieve the new model parameters
+            let parameters = r.borrow().clone();
+
+            // Apply it
+            self.lsystem_params.bezier_models[*i] = parameters;
+
+            // We now need to refresh bezier models.
+            self.refresh_bezier_models();
+
+            should_clear = true;
+        }
+
+        if should_clear {
+            // Clear it, so that we don't to the refreshing again next frame.
+            self.model_to_refresh = None
         }
     }
 

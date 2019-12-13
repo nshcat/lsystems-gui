@@ -82,7 +82,8 @@ pub struct LSystemParameters {
 	/// order of interpretations and thus obtain some degree of consistency when it comes to
 	/// gui rendering.
 	pub interpretations: Vec<Interpretation>,
-	pub color_palette: Vec<Vec3>
+	pub color_palette: Vec<Vec3>,
+	pub bezier_models: Vec<BezierModelParameters>
 }
 
 impl LSystemParameters {

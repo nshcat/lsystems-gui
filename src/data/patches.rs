@@ -3,7 +3,7 @@ use serde_derive::*;
 use nalgebra_glm::Vec3;
 
 /// Data of a single bezier curve in a bezier patch
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BezierCurveParameters {
     /// The four control points that describe this curve
     pub control_points: [Vec3; 4]
@@ -19,7 +19,7 @@ impl BezierCurveParameters {
 
 /// A structure containing all data and settings to construct a 3D bicubic bezier
 /// patch surface.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BezierPatchParameters {
     /// The four bezier curves that make up the patch
     pub curves: [BezierCurveParameters; 4]
@@ -40,12 +40,20 @@ impl BezierPatchParameters {
 
 /// A collection of multiple bezier patch definitions which make up a whole
 /// model which can be used as part of an L-System.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BezierModelParameters {
     /// The name this model can be referenced by in the L-System
-    pub identifier: char,
+    pub symbol: Option<char>,
     /// The parameters of the patches this model is made out of
     pub patches: Vec<BezierPatchParameters>
 }
 
+impl BezierModelParameters {
+    pub fn empty() -> BezierModelParameters {
+        BezierModelParameters {
+            symbol: None,
+            patches: Vec::new()
+        }
+    }
+}
 

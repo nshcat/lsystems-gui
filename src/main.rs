@@ -94,6 +94,9 @@ fn main() {
             // Borrow mutable reference to the current scene for this frame
             let mut scene = scene_manager.current_scene().borrow_mut();
 
+            // Perform logic
+            scene.do_logic();
+
             // Render scene to screen
             scene.render();
 

@@ -33,6 +33,11 @@ pub trait Scene {
 
     /// Handle window resize event.
     fn handle_resize(&mut self, w: u32, h: u32);
+
+    /// Do some logic. This may not change the scene stack. It is execute before any rendering is done.
+    /// Its purpose is to sneak in some operations that detect things like "just switched back to this scene"
+    /// etc.
+    fn do_logic(&mut self);
 }
 
 /// A struct that manages a stack of scenes.
