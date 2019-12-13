@@ -69,7 +69,11 @@ impl LSystemScene {
         let mut test_mesh;
         {
             let mat = Box::new(SimpleMaterial::new());
-            let geometry = PlaneGeometry::new(4, 4, Vec3::new(1.0, 1.0, 1.0));
+            let geometry = PlaneGeometry::with_displacement(
+                30, 30,
+                Vec3::new(1.0, 1.0, 1.0),
+                &|u, v| Vec3::new(u, v, (u*10.0).sin()*0.1)
+            );
 
             test_mesh = Mesh::new_indexed(
                 PrimitiveType::TriangleStrip,
@@ -77,7 +81,7 @@ impl LSystemScene {
                 &geometry
             );
 
-            test_mesh.draw_wireframe = true;
+            test_mesh.draw_wireframe = false;
         }
 
 

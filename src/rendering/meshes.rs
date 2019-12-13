@@ -480,6 +480,31 @@ impl IndexedGeometry for PlaneGeometry {
 }
 
 impl PlaneGeometry {
+    /// Create a new plane and displace vertices using given closure
+    pub fn with_displacement(rows: u32, cols: u32, color: Vec3, f: &dyn Fn(f32, f32) -> Vec3) -> PlaneGeometry {
+        let mut plane = Self::new(rows, cols, color);
+
+        {
+            let vertices = &mut plane.positions.local_buffer;
+
+            for y in 0..=rows {
+                let base = y * (cols+1);
+
+                for x in 0..=cols {
+                    let u = (x as f32) / (cols + 1) as f32;
+                    let v = (y as f32) / (rows + 1) as f32;
+
+                    let newVertex = f(u, v);
+                    vertices[(base + x) as usize] = newVertex;
+                }
+            }
+        }
+
+        // TODO: CALCULATE NORMAL VECTORS!
+
+        plane
+    }
+
     /// Create a new plane geometry
     pub fn new(rows: u32, cols: u32, color: Vec3) -> PlaneGeometry {
         let total_vertices = (rows + 1) * (cols + 1);
@@ -506,7 +531,6 @@ impl PlaneGeometry {
                 );
             }
         }
-
 
         // Create indices
         let rows = rows - 1;
