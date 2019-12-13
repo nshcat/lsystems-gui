@@ -20,30 +20,148 @@ pub struct BezierEditorScene {
     /// Camera used to view the patches
     camera: Camera,
     /// All meshes to render.
-    meshes: Vec<Mesh>
+    meshes: Vec<Mesh>,
+    /// Control point visualisation
+    control_point_meshes: Vec<Mesh>,
+    /// Control curve visualisation
+    control_curve_meshes: Vec<Mesh>,
+    /// Point clouds approximating the patch (for debugging purposes)
+    patch_approximations: Vec<Mesh>
 }
 
 impl BezierEditorScene {
     pub fn new(model: RcCell<BezierModelParameters>, w: u32, h: u32) -> BezierEditorScene {
         let working_copy = model.borrow().clone();
-        BezierEditorScene {
+        let mut scene = BezierEditorScene {
             working_copy: working_copy,
             model: model,
             camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
-            meshes: Vec::new()
-        }
+            meshes: Vec::new(),
+            control_point_meshes: Vec::new(),
+            control_curve_meshes: Vec::new(),
+            patch_approximations: Vec::new()
+        };
+
+        scene.refresh_meshes();
+
+        scene
     }
 }
 
 impl BezierEditorScene {
     /// Just refresh the mesh for the patch with given index
     fn refresh_mesh_for(&mut self, index: usize) {
+        let patch = &self.working_copy.patches[index];
 
+        let mesh = self.create_mesh(patch);
+        self.meshes[index] = mesh;
+
+        let control_point_mesh = self.create_control_point_mesh(patch);
+        self.control_point_meshes[index] = control_point_mesh;
+
+        let control_curve_mesh = self.create_control_curve_mesh(patch);
+        self.control_curve_meshes[index] = control_curve_mesh;
+
+        let point_cloud_mesh = self.create_point_cloud(patch);
+        self.patch_approximations[index] = point_cloud_mesh;
     }
 
     /// Refresh all patch meshes
     fn refresh_meshes(&mut self) {
+        self.meshes = Vec::new();
+        self.control_point_meshes = Vec::new();
+        self.control_curve_meshes = Vec::new();
+        self.patch_approximations = Vec::new();
 
+        for patch in &self.working_copy.patches {
+            self.meshes.push(self.create_mesh(patch));
+            self.control_point_meshes.push(self.create_control_point_mesh(patch));
+            self.control_curve_meshes.push(self.create_control_curve_mesh(patch));
+            self.patch_approximations.push(self.create_point_cloud(patch));
+        }
+    }
+
+    fn create_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
+        let plane = PlaneGeometry::with_displacement(
+            30, 30, Vec3::new(0.4, 0.4, 0.4),
+            &|u, v| patch.evaluate(u, v)
+        );
+
+        let mat = Box::new(SimpleMaterial::new());
+
+        let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &plane);
+        mesh.draw_wireframe = true;
+        mesh
+    }
+
+    fn create_control_point_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
+        let mut points = Vec::new();
+
+        for curve in &patch.curves {
+            for i in 0..4 {
+                points.push(curve.control_points[i].clone());
+            }
+        }
+
+        let mut geom = BasicGeometry::new();
+        geom.colors.local_buffer = vec![Vec3::new(1.0, 1.0, 1.0); points.len()];
+        geom.normals.local_buffer = vec![Vec3::new(0.0, 0.0, 0.0); points.len()];
+        geom.positions.local_buffer = points;
+
+        let mat = Box::new(SimpleMaterial::new());
+
+        let mut mesh = Mesh::new(PrimitiveType::Points, mat, &geom);
+        mesh.point_size = 3.0;
+
+        mesh
+    }
+
+    fn create_control_curve_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
+        let mut points = Vec::new();
+
+        for curve in &patch.curves {
+            for i in 1..4 {
+                points.push(curve.control_points[i-1].clone());
+                points.push(curve.control_points[i].clone());
+            }
+        }
+
+        let mut geom = BasicGeometry::new();
+        geom.colors.local_buffer = vec![Vec3::new(1.0, 1.0, 0.0); points.len()];
+        geom.normals.local_buffer = vec![Vec3::new(0.0, 0.0, 0.0); points.len()];
+        geom.positions.local_buffer = points;
+
+        let mat = Box::new(SimpleMaterial::new());
+
+        let mut mesh = Mesh::new(PrimitiveType::Lines, mat, &geom);
+
+        mesh
+    }
+
+
+    fn create_point_cloud(&self, patch: &BezierPatchParameters) -> Mesh {
+        let points_x = 60;
+        let points_y = 60;
+
+        let mut points = Vec::new();
+
+        for y in 0..60 {
+            for x in 0..60 {
+                points.push(patch.evaluate((x as f32) / (points_x as f32), (y as f32) / (points_y as f32)));
+            }
+        }
+
+        let mut geom = BasicGeometry::new();
+        geom.colors.local_buffer = vec![Vec3::new(0.0, 0.0, 1.0); points.len()];
+        geom.normals.local_buffer = vec![Vec3::new(0.0, 0.0, 0.0); points.len()];
+        geom.positions.local_buffer = points;
+
+        let mat = Box::new(SimpleMaterial::new());
+
+        let mut mesh = Mesh::new(PrimitiveType::Points, mat, &geom);
+        mesh.point_size = 2.0;
+
+        mesh
     }
 }
 
@@ -53,6 +171,18 @@ impl Scene for BezierEditorScene {
         let mut rp = self.camera.to_render_parameters();
 
         for mesh in &self.meshes {
+            mesh.render(&mut rp);
+        }
+
+        for mesh in &self.control_point_meshes {
+            mesh.render(&mut rp);
+        }
+
+        for mesh in &self.control_curve_meshes {
+            mesh.render(&mut rp);
+        }
+
+        for mesh in &self.patch_approximations {
             mesh.render(&mut rp);
         }
     }
@@ -73,6 +203,9 @@ impl Scene for BezierEditorScene {
                     .default_open(true)
                     .build() {
                     ui.indent();
+
+                    let mut modified: Option<usize> = None;
+                    let mut refresh_all = false;
  
                     for (i, patch) in self.working_copy.patches.iter_mut().enumerate() {
                         let patch_id = ui.push_id(i as i32);
@@ -110,6 +243,7 @@ impl Scene for BezierEditorScene {
                                         .speed(0.06)
                                         .build() {
                                             *point = Vec3::new(data[0], data[1], data[2]);
+                                            modified = Some(i);
                                     }
                                 }
 
@@ -132,11 +266,18 @@ impl Scene for BezierEditorScene {
                 
                     if ui.button(im_str!("+"), [0.0, 0.0]) {
                         self.working_copy.patches.push(BezierPatchParameters::empty());
+                        refresh_all = true;
                     }
                 
                     colors.pop(ui);
 
                     ui.unindent();
+
+                    if refresh_all {
+                        self.refresh_meshes();
+                    } else if let Some(i) = modified {
+                        self.refresh_mesh_for(i);
+                    }
                 }
 
                 if ui.collapsing_header(im_str!("Settings"))
@@ -155,9 +296,14 @@ impl Scene for BezierEditorScene {
 
                 if ui.button(im_str!("Save"), [0.0, 0.0]) {
                     *self.model.borrow_mut() = self.working_copy.clone();
-                    action = SceneAction::PopScene;
                 }
 
+                ui.same_line(0.0);
+
+                if ui.button(im_str!("Save and Exit"), [0.0, 0.0]) {
+                    *self.model.borrow_mut() = self.working_copy.clone();
+                    action = SceneAction::PopScene;
+                }
         });
 
         action

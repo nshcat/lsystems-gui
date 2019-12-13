@@ -18,9 +18,11 @@ use crate::rendering::traits::*;
 use crate::scene::*;
 use crate::scene::lsystem::bounding_box::*;
 use crate::scene::lsystem::normal_test_material::*;
+use crate::scene::lsystem::normal_color_test_material::*;
 
 mod bounding_box;
 mod normal_test_material;
+mod normal_color_test_material;
 mod gui;
 
 /// A struct managing the currently displayed LSystem and providing methods
@@ -49,7 +51,7 @@ pub struct LSystemScene {
     /// Screen height
     pub height: u32,
 
-    test_mesh: Mesh
+    test_meshes: Vec<Mesh>
 }
 
 impl LSystemScene {
@@ -67,12 +69,14 @@ impl LSystemScene {
         let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
 
         let mut test_mesh;
+        let mut test_mesh2;
         {
-            let mat = Box::new(SimpleMaterial::new());
+            let mat = Box::new(NormalTestMaterial::new(0.05, &Vec3::new(1.0, 1.0, 0.0)));
+            let mat2 = Box::new(SimpleMaterial::new());
             let geometry = PlaneGeometry::with_displacement(
                 30, 30,
-                Vec3::new(1.0, 1.0, 1.0),
-                &|u, v| Vec3::new(u, v, (u*10.0).sin()*0.1)
+                Vec3::new(0.35, 0.35, 0.35),
+                &|u, v| Vec3::new(u, v, ((u*10.0).sin()*(v*10.0).cos()) * 0.1)
             );
 
             test_mesh = Mesh::new_indexed(
@@ -81,7 +85,11 @@ impl LSystemScene {
                 &geometry
             );
 
-            test_mesh.draw_wireframe = false;
+            test_mesh2 = Mesh::new_indexed(
+                PrimitiveType::TriangleStrip,
+                mat2,
+                &geometry
+            );
         }
 
 
@@ -96,7 +104,7 @@ impl LSystemScene {
             model_to_refresh: None,
             width: w,
             height: h,
-            test_mesh: test_mesh
+            test_meshes: vec![test_mesh, test_mesh2]
         };
 
         if settings.auto_center_camera {
@@ -405,7 +413,9 @@ impl Scene for LSystemScene {
             mesh.render(&mut params);
         }
 
-        self.test_mesh.render(&mut params);
+        for mesh in &self.test_meshes {
+            mesh.render(&mut params);
+        }
 
         if let Some(bb) = &self.bounding_box {
             if self.app_settings.draw_bounding_box {

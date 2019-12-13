@@ -300,6 +300,40 @@ impl DynamicGeometry for ExtendableBasicGeometry {
 pub struct NormalGenerator;
 
 impl NormalGenerator {
+    /// Calculate all faces of indexed geometry.
+    fn calculate_indexed_faces(pt: PrimitiveType, indices: &[u32]) -> Vec<UVec3> {
+        let mut faces = Vec::new();
+
+        match pt {
+            // Triangle fans contain triangles that all share the same root vertex, which 
+            // always is the vertex with index 0.
+            PrimitiveType::TriangleFan => {
+                for i in 2..indices.len() {
+                    faces.push(UVec3::new(indices[0], indices[(i-1)], indices[i]));
+                }
+            },
+            // Unconnected triangle soup, which means that each vertex is only used exactly once.
+            PrimitiveType::Triangles => {
+                if indices.len() % 3 != 0 {
+                    panic!("Can't create faces for given vertex count: not multiple of 3");
+                }
+
+                for i in (0..indices.len()).step_by(3) {
+                    faces.push(UVec3::new(indices[i], indices[i+1], indices[i+2]));
+                }
+            },
+            // A strip uses a sliding window of width 3 to assign triangles to vertices.
+            PrimitiveType::TriangleStrip => {
+                for i in 2..indices.len() {
+                    faces.push(UVec3::new(indices[i-2], indices[i-1], indices[i]));
+                }
+            },
+            _ => panic!("Primitive type not supported by calculate_indexed_faces!")
+        };
+
+        faces
+    }
+
     /// Determine all faces of the geometry. This returns vectors containg three indices
     /// into the vertex slice.
     fn calculate_faces(pt: PrimitiveType, num_vertices: usize) -> Vec<UVec3> {
@@ -391,6 +425,39 @@ impl NormalGenerator {
 
         normals
     }
+
+    /// Generate vertex normals for given indexed vertices interpreted as given primitive type
+    pub fn generate_indexed_normals(pt: PrimitiveType, positions: &[Vec3], indices: &[u32]) -> Vec<Vec3> {
+        // Create sequence of empty normal vectors
+        let mut normals = Vec::with_capacity(positions.len());
+
+        for _ in 0..positions.len() {
+            normals.push(Vec3::zeros());
+        }
+
+        // Determine faces
+        let faces = Self::calculate_indexed_faces(pt, indices);
+
+        // Calculate face normals
+        let face_normals = Self::generate_face_normals(positions, &faces);
+
+        // For each face, add the normal vector to each of its participating vertices
+        for (i, face) in faces.iter().enumerate() {
+            let normal = face_normals[i];
+
+            // TODO normally this would be +=, why is it not working with +=?
+            normals[face.x as usize] = normal;
+            normals[face.y as usize] = normal;
+            normals[face.z as usize] = normal;
+        }
+
+        // Finally, the normal vectors need to be normalized
+        for i in 0..normals.len() {
+            *normals[i] = *normals[i].normalize();
+        }
+
+        normals
+    }
 }
 
 /// A struct storing vertex information for basic drawing operations: position, color and
@@ -398,11 +465,11 @@ impl NormalGenerator {
 #[derive(Clone)]
 pub struct BasicGeometry {
     /// Position value for each vertex
-    positions: AttributeArray<Vec3>,
+    pub positions: AttributeArray<Vec3>,
     /// Color value for each vertex
-    colors: AttributeArray<Vec3>,
+    pub colors: AttributeArray<Vec3>,
     /// Normal vector for each vertex
-    normals: AttributeArray<Vec3>
+    pub normals: AttributeArray<Vec3>
 }
 
 impl BasicGeometry {
@@ -500,7 +567,13 @@ impl PlaneGeometry {
             }
         }
 
-        // TODO: CALCULATE NORMAL VECTORS!
+        let normals = NormalGenerator::generate_indexed_normals(
+            PrimitiveType::TriangleStrip,
+            &plane.positions.local_buffer,
+            &plane.indices
+        );
+
+        plane.normals.local_buffer = normals;
 
         plane
     }
@@ -574,7 +647,8 @@ pub enum PrimitiveType {
     TriangleFan = gl::TRIANGLE_FAN,
     Lines = gl::LINES,
     LineStrip = gl::LINE_STRIP,
-    LineLoop = gl::LINE_LOOP
+    LineLoop = gl::LINE_LOOP,
+    Points = gl::POINTS
 }
 
 /// A mesh is a combination of geometry and a material, which can not be changed.
@@ -594,7 +668,9 @@ pub struct Mesh {
     /// Whether to draw this mesh as a wireframe
     pub draw_wireframe: bool,
     /// Index buffer, which is only present if the geometry was indexed.
-    index_buffer: Option<Box<dyn BufferBase>>
+    index_buffer: Option<Box<dyn BufferBase>>,
+    /// Size of rendered points. Only used if primitive type is "Points".
+    pub point_size: f32
 }
 
 impl Mesh {
@@ -609,7 +685,8 @@ impl Mesh {
             buffers: Vec::new(),
             draw_wireframe: false,
             num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent"),
-            index_buffer: None
+            index_buffer: None,
+            point_size: 1.0
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -638,7 +715,8 @@ impl Mesh {
             buffers: Vec::new(),
             draw_wireframe: false,
             num_vertices: indices.len(),
-            index_buffer: None
+            index_buffer: None,
+            point_size: 1.0
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -715,6 +793,10 @@ impl Render for Mesh {
         unsafe{
             if self.draw_wireframe {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+            }
+
+            if let PrimitiveType::Points = self.primitive_type {
+                gl::PointSize(self.point_size as _);
             }
 
             if let Some(idxbuf) = &self.index_buffer {
