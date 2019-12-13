@@ -363,10 +363,8 @@ impl Scene for LSystemScene {
 
     /// Show imgui GUI if needed.
     fn do_gui(&mut self, ui: &Ui) -> SceneAction {
-        gui::do_lsystem_params_gui(ui,  self);
         gui::do_main_menu_bar(ui, self);
-
-        SceneAction::Nothing
+        gui::do_lsystem_params_gui(ui, self)
     }
 
     /// Handle input event. This is only called if the UI does not want to grab input.

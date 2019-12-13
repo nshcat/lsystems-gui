@@ -1,6 +1,8 @@
 use imgui::{MenuItem, EditableColor, ColorEdit, ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use nalgebra_glm::Vec3;
 use crate::scene::lsystem::*;
+use crate::scene::*;
+use crate::scene::bezier::*;
 use crate::data;
 use crate::data::*;
 use lsystems_core::drawing::types::*;
@@ -33,7 +35,9 @@ fn do_color_palette_entry(ui: &Ui, value: &mut Vec3, idx: usize) -> bool {
     return changed;
 }
 
-pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
+pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) -> SceneAction {
+    let mut action = SceneAction::Nothing;
+
     ImWindow::new(&ImString::new(&lsystem.lsystem_params.name))
             .size([450.0, 550.0], Condition::FirstUseEver)
             .position([0.0, 60.0], Condition::FirstUseEver)
@@ -82,10 +86,12 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
                     .default_open(false)
                     .build() {
                     ui.indent();
-                    do_debug_options(ui, lsystem);
+                    do_debug_options(ui, lsystem, &mut action);
                     ui.unindent();
                 }
             });
+
+    action
 }
 
 fn draw_operations() -> Vec<&'static ImStr> {
@@ -243,13 +249,17 @@ fn do_file_menu(ui: &Ui, lsystem: &mut LSystemScene) {
     }
 }
 
-fn do_debug_options(ui: &Ui, lsystem: &mut LSystemScene) {
+fn do_debug_options(ui: &Ui, lsystem: &mut LSystemScene, action: &mut SceneAction) {
     if ui.checkbox(im_str!("Show normal vectors"), &mut lsystem.app_settings.show_normals) {
         lsystem.refresh_meshes();
     }
 
     if ui.checkbox(im_str!("Draw polygons as wireframe"), &mut lsystem.app_settings.draw_wireframe) {
         lsystem.refresh_wireframe_flag();
+    }
+
+    if ui.button(im_str!("Switch to test scene"), [0.0, 0.0]) {
+        *action = SceneAction::PushScene(make_rc_cell(BezierEditorScene{}));
     }
 }
 
