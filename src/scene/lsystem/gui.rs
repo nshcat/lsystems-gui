@@ -191,7 +191,7 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
         Some(i) => {
             *action = SceneAction::PushScene(
                 make_rc_cell(
-                    BezierEditorScene::new(system.edit_bezier_model(i))
+                    BezierEditorScene::new(system.edit_bezier_model(i), system.width, system.height)
                 )
             );
         },

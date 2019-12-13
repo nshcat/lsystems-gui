@@ -3,6 +3,11 @@ use imgui::*;
 use nalgebra_glm::Vec3;
 use crate::scene::*;
 use crate::data::patches::*;
+use crate::rendering::*;
+use crate::rendering::camera::*;
+use crate::rendering::meshes::*;
+use crate::rendering::materials::*;
+use crate::rendering::traits::*;
 extern crate glfw;
 
 
@@ -11,23 +16,45 @@ pub struct BezierEditorScene {
     /// hit "save".
     model: RcCell<BezierModelParameters>,
     /// The copy of the model parameters the GUI operates on.
-    working_copy: BezierModelParameters
+    working_copy: BezierModelParameters,
+    /// Camera used to view the patches
+    camera: Camera,
+    /// All meshes to render.
+    meshes: Vec<Mesh>
 }
 
 impl BezierEditorScene {
-    pub fn new(model: RcCell<BezierModelParameters>) -> BezierEditorScene {
+    pub fn new(model: RcCell<BezierModelParameters>, w: u32, h: u32) -> BezierEditorScene {
         let working_copy = model.borrow().clone();
         BezierEditorScene {
             working_copy: working_copy,
-            model: model
+            model: model,
+            camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
+            meshes: Vec::new()
         }
+    }
+}
+
+impl BezierEditorScene {
+    /// Just refresh the mesh for the patch with given index
+    fn refresh_mesh_for(&mut self, index: usize) {
+
+    }
+
+    /// Refresh all patch meshes
+    fn refresh_meshes(&mut self) {
+
     }
 }
 
 impl Scene for BezierEditorScene {
     /// Render scene to screen. This also includes any GUI components.
     fn render(&self) {
+        let mut rp = self.camera.to_render_parameters();
 
+        for mesh in &self.meshes {
+            mesh.render(&mut rp);
+        }
     }
 
     fn do_logic(&mut self) {
@@ -138,11 +165,11 @@ impl Scene for BezierEditorScene {
 
     /// Handle input event. This is only called if the UI does not want to grab input.
     fn handle_event(&mut self, window: &glfw::Window, event: &glfw::WindowEvent) {
-        
+        self.camera.handle_event(window, event);
     }
 
     /// Handle window resize event.
     fn handle_resize(&mut self, w: u32, h: u32) {
-        
+        self.camera.update(w, h);
     }
 }

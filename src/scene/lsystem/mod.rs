@@ -43,7 +43,11 @@ pub struct LSystemScene {
     /// This option contains a reference shared with a BezierEditorScene instance that is running on top
     /// of this scene in the SceneManager. If at any point, this scene gets evaluated and this is not None,
     /// it contains the result of the editor scene and has to be handled.
-    model_to_refresh: Option<(usize, RcCell<BezierModelParameters>)>
+    model_to_refresh: Option<(usize, RcCell<BezierModelParameters>)>,
+    /// Screen width
+    pub width: u32,
+    /// Screen height
+    pub height: u32
 }
 
 impl LSystemScene {
@@ -68,7 +72,9 @@ impl LSystemScene {
             lsystem,
             bounding_box: bb,
             camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
-            model_to_refresh: None
+            model_to_refresh: None,
+            width: w,
+            height: h
         };
 
         if settings.auto_center_camera {
@@ -423,5 +429,8 @@ impl Scene for LSystemScene {
     /// Handle window resize event.
     fn handle_resize(&mut self, w: u32, h: u32) {
         self.camera.update(w, h);
+
+        self.width = w;
+        self.height = h;
     }
 }
