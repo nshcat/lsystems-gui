@@ -188,6 +188,11 @@ pub trait DynamicGeometry: Geometry {
     fn attr_by_label<T: GPUType + 'static>(&self, label: &str) -> & AttributeArray<T>;
 }
 
+/// Trait for geometries that are rendered via indexed drawing.
+pub trait IndexedGeometry: Geometry {
+    fn retrieve_indices(&self) -> &[u32];
+}
+
 /// A basic geometry that can dynamically be extended with additional attributes.
 pub struct ExtendableBasicGeometry {
     /// Position value for each vertex
@@ -453,6 +458,88 @@ impl Geometry for BasicGeometry {
     }
 }
 
+/// A geometry that generates a tesselated plane, that goes from 0 to 1 in each dimensions
+/// and is in XZ plane
+pub struct PlaneGeometry {
+    positions: AttributeArray<Vec3>,
+    colors: AttributeArray<Vec3>,
+    normals: AttributeArray<Vec3>,
+    indices: Vec<u32>
+}
+
+impl Geometry for PlaneGeometry {
+    fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
+        vec![&self.positions, &self.colors, &self.normals]
+    }
+}
+
+impl IndexedGeometry for PlaneGeometry {
+    fn retrieve_indices(&self) -> &[u32] {
+        &self.indices
+    }
+}
+
+impl PlaneGeometry {
+    /// Create a new plane geometry
+    pub fn new(rows: u32, cols: u32, color: Vec3) -> PlaneGeometry {
+        let total_vertices = (rows + 1) * (cols + 1);
+        let num_indices_per_row = (cols * 2) + 2;
+        let num_index_degens_req = (rows - 1) * 2;
+        let total_indices = num_indices_per_row * rows + num_index_degens_req;
+
+        let mut vertices: Vec<Vec3> = vec![Vec3::zeros(); total_vertices as _];
+        let mut indices: Vec<u32> = Vec::with_capacity(total_indices as _);
+
+        let rows = rows + 1;
+        let cols = cols + 1;
+
+        // Create vertices
+        for y in 0..rows {
+            let base = y * cols;
+
+            for x in 0..cols {
+                let index = (base + x) as usize;
+                vertices[index] = Vec3::new(
+                    (x as f32) / ((cols-1) as f32),
+                    (y as f32) / ((rows-1)  as f32),
+                    0.0
+                );
+            }
+        }
+
+
+        // Create indices
+        let rows = rows - 1;
+
+        for y in 0..rows {
+            let base = y * cols;
+
+            for x in 0..cols {
+                indices.push(base + x);
+                indices.push(base + cols + x);
+            }
+
+            if y < (rows - 1) {
+                indices.push((y + 1) * cols + (cols - 1));
+                indices.push((y + 1) * cols);
+            }
+        }
+
+        let mut geometry = PlaneGeometry {
+            positions: AttributeArray::new(0, "position"),
+            colors: AttributeArray::new(1, "color"),
+            normals: AttributeArray::new(2, "normal"),
+            indices: indices
+        };
+
+        geometry.colors.local_buffer = vec![color; vertices.len()];
+        geometry.normals.local_buffer = vec![Vec3::new(0.0, 1.0, 0.0); vertices.len()];
+        geometry.positions.local_buffer = vertices;
+
+        geometry
+    } 
+}
+
 /// Enumeration describing the various primtive types that can be used to interpret and draw
 /// the vertex data contained within a mesh instance.
 #[derive(Debug, Clone, Copy)]
@@ -481,7 +568,9 @@ pub struct Mesh {
     /// Number of vertices supplied
     num_vertices: usize,
     /// Whether to draw this mesh as a wireframe
-    pub draw_wireframe: bool
+    pub draw_wireframe: bool,
+    /// Index buffer, which is only present if the geometry was indexed.
+    index_buffer: Option<Box<dyn BufferBase>>
 }
 
 impl Mesh {
@@ -495,7 +584,8 @@ impl Mesh {
             vao: VertexArray::new(),
             buffers: Vec::new(),
             draw_wireframe: false,
-            num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent")
+            num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent"),
+            index_buffer: None
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -510,6 +600,40 @@ impl Mesh {
         }
 
         mesh
+    }
+
+    /// Create a new mesh with given primitive type from given indexed geometry
+    pub fn new_indexed(pt: PrimitiveType, mat: Box<dyn Material>, geometry: &dyn IndexedGeometry) -> Mesh {
+        let attributes = geometry.retrieve_attributes();
+        let indices = geometry.retrieve_indices();
+        
+        let mut mesh = Mesh {
+            primitive_type: pt,
+            material: mat,
+            vao: VertexArray::new(),
+            buffers: Vec::new(),
+            draw_wireframe: false,
+            num_vertices: indices.len(),
+            index_buffer: None
+        };
+
+        // Create buffers and register attributes with vao for each attribute in the geometry
+        for attribute in &attributes {
+            let buffer = attribute.to_vertex_buffer();
+
+            buffer.enable();
+            attribute.setup_attribute(&mesh.vao);
+            buffer.disable();
+
+            mesh.buffers.push(buffer);
+        }
+
+        // Create index buffer
+        let index_buffer = Box::new(Buffer::new_index_buffer(indices));
+        mesh.index_buffer = Some(index_buffer);
+
+        mesh
+
     }
 
     /// Retrieve downcasted material reference
@@ -569,9 +693,20 @@ impl Render for Mesh {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
             }
 
-            
+            if let Some(idxbuf) = &self.index_buffer {
+                idxbuf.enable();
+
+                gl::DrawElements(
+                    self.primitive_type as _,
+                    self.num_vertices as _,
+                    gl::UNSIGNED_INT,
+                    0 as _
+                );
+
+                idxbuf.disable();
+            } else {
                 gl::DrawArrays(self.primitive_type as _, 0, self.num_vertices as _);
-            
+            } 
 
             if self.draw_wireframe {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);

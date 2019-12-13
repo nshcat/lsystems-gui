@@ -14,7 +14,8 @@ use nalgebra_glm::{Mat4, Vec3};
 #[derive(Debug, Clone, Copy)]
 #[repr(u32)]
 pub enum ValueType {
-    Float = gl::FLOAT
+    Float = gl::FLOAT,
+    UInt = gl::UNSIGNED_INT,
 }
 
 /// A class holding important rendering parameters, such as the view and projection matrices.

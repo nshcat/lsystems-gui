@@ -47,7 +47,9 @@ pub struct LSystemScene {
     /// Screen width
     pub width: u32,
     /// Screen height
-    pub height: u32
+    pub height: u32,
+
+    test_mesh: Mesh
 }
 
 impl LSystemScene {
@@ -64,6 +66,21 @@ impl LSystemScene {
         let mesh = Self::retrieve_line_mesh(&lsystem, params);
         let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
 
+        let mut test_mesh;
+        {
+            let mat = Box::new(SimpleMaterial::new());
+            let geometry = PlaneGeometry::new(4, 4, Vec3::new(1.0, 1.0, 1.0));
+
+            test_mesh = Mesh::new_indexed(
+                PrimitiveType::TriangleStrip,
+                mat,
+                &geometry
+            );
+
+            test_mesh.draw_wireframe = true;
+        }
+
+
         let mut scene = LSystemScene{
             lsystem_params: params.clone(),
             app_settings: settings.clone(),
@@ -74,7 +91,8 @@ impl LSystemScene {
             camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
             model_to_refresh: None,
             width: w,
-            height: h
+            height: h,
+            test_mesh: test_mesh
         };
 
         if settings.auto_center_camera {
@@ -382,6 +400,8 @@ impl Scene for LSystemScene {
         for mesh in &self.polygon_meshes {
             mesh.render(&mut params);
         }
+
+        self.test_mesh.render(&mut params);
 
         if let Some(bb) = &self.bounding_box {
             if self.app_settings.draw_bounding_box {
