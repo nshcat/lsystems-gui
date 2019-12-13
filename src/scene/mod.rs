@@ -26,7 +26,7 @@ pub trait Scene {
     fn render(&self);
 
     /// Show imgui GUI if needed.
-    fn do_gui(&mut self, ui: &Ui);
+    fn do_gui(&mut self, ui: &Ui) -> SceneAction;
 
     /// Handle input event. This is only called if the UI does not want to grab input.
     fn handle_event(&mut self, window: &Window, event: &WindowEvent);
@@ -60,7 +60,30 @@ impl SceneManager {
         self.scenes.pop().expect("pop called on empty scene stack");
     }
 
+    /// Retrieve the current scene
     pub fn current_scene(&self) -> &RcCell<dyn Scene> {
         self.scenes.last().expect("current_scene called on empty scene stack")
     }
+
+    /// Process given scene action command object.
+    pub fn process_action(&mut self, action: SceneAction) {
+        match action {
+            SceneAction::PushScene(scene) => self.push_scene(scene),
+            SceneAction::PopScene => self.pop_scene(),
+            _ => {}
+        }
+    }
+}
+
+/// An enumeration implementing the Command pattern in order to tell the scene manager
+/// what action to take after a scene has been rendered. It can be used to push/pop scenes
+/// from within the current scene, while avoiding borrowing issues.
+pub enum SceneAction {
+    /// Do nothing
+    Nothing,
+    /// Pop the current scene from the scene stack
+    PopScene,
+    /// Push given new scene to the scene stack. It will become the new
+    /// current scene.
+    PushScene(RcCell<dyn Scene>)
 }

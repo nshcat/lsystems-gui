@@ -62,13 +62,13 @@ fn main() {
     let mut show_menu = true;
 
     // ======== Scene setup =================
-    let scene_manager = make_rc_cell(SceneManager::new());
+    let mut scene_manager = SceneManager::new();
 
     // Create initial scene
     {
         let (w, h) = window.get_size();
 
-        scene_manager.borrow_mut().push_scene(
+        scene_manager.push_scene(
             make_rc_cell(
                 LSystemScene::new(
                     &LSystemParameters::from_string(data::presets::PENROSE),
@@ -88,11 +88,11 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
         
-        
+        // The scene manager action emitted by the folling scene render.
+        let action;
         {
-            // Borrow mutable reference to the current frame for this
-            let manager = scene_manager.borrow();
-            let mut scene = manager.current_scene().borrow_mut();
+            // Borrow mutable reference to the current scene for this frame
+            let mut scene = scene_manager.current_scene().borrow_mut();
 
             // Render scene to screen
             scene.render();
@@ -100,7 +100,7 @@ fn main() {
             // Render the gui
             {
                 let ui = imgui_glfw.frame(&mut window, &mut imgui);
-                scene.do_gui(&ui);
+                action = scene.do_gui(&ui);
                 imgui_glfw.draw(ui, &mut window);
             }      
             
@@ -134,5 +134,8 @@ fn main() {
             }
 
         }
+
+        // Process action
+        scene_manager.process_action(action);
     }
 }
