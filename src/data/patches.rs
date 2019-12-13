@@ -88,6 +88,8 @@ impl BezierPatchParameters {
         let resultX = &U * &Mb * &GBx * &Mbt * &Vt;
         let resultY = &U * &Mb * &GBy * &Mbt * &Vt;
         let resultZ = &U * &Mb * &GBz * &Mbt * &Vt;
+
+        Vec3::new(resultX[0], resultY[0], resultZ[0])
     }
 }
 

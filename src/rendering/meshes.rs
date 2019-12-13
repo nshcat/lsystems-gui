@@ -32,7 +32,7 @@ use std::ptr::*;
 use std::collections::*;
 use std::borrow::*;
 use crate::rendering::RenderParameters;
-use crate::rendering::buffers::{VertexArray, VertexBuffer, VertexBufferBase};
+use crate::rendering::buffers::{VertexArray, Buffer, BufferBase};
 use crate::rendering::materials::*;
 use crate::rendering::traits::*;
 
@@ -98,7 +98,7 @@ pub trait AttributeArrayBase {
     fn setup_attribute(&self, vao: &VertexArray);
 
     /// Create vertex buffer from this attribute array.
-    fn to_vertex_buffer(&self) -> Box<dyn VertexBufferBase>;
+    fn to_vertex_buffer(&self) -> Box<dyn BufferBase>;
 
     /// How many elements are currently stored in the local buffer.
     fn len(&self) -> usize;
@@ -145,8 +145,8 @@ impl<T: 'static> AttributeArrayBase for AttributeArray<T> where T: GPUType {
         vao.activate_attribute::<T>(&self.descriptor);
     }
 
-    fn to_vertex_buffer(&self) -> Box<dyn VertexBufferBase> {
-        Box::new(VertexBuffer::<T>::new(&self.local_buffer))
+    fn to_vertex_buffer(&self) -> Box<dyn BufferBase> {
+        Box::new(Buffer::<T>::new_vertex_buffer(&self.local_buffer))
     }
 
     /// How many elements are currently stored in the local buffer.
@@ -473,7 +473,7 @@ pub struct Mesh {
     primitive_type: PrimitiveType,
     /// Vertex buffer objects storing the vertex attribute data. There is a buffer
     /// for each attribute in the geometry.
-    buffers: Vec<Box<dyn VertexBufferBase>>,
+    buffers: Vec<Box<dyn BufferBase>>,
     /// Vertex array object defining vertex attributes
     vao: VertexArray,
     /// Associated material trait object

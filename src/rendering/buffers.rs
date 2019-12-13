@@ -8,8 +8,8 @@ use crate::rendering::meshes::*;
 /// A simple struct storing an error message regarding buffer creation and usage
 pub struct BufferError(&'static str);
 
-/// A trait that allows code to manage vertex buffers of different value types.
-pub trait VertexBufferBase {
+/// A trait that allows code to manage buffers of different value types.
+pub trait BufferBase {
     /// Bind this vertex buffer and enable it
     fn enable(&self);
 
@@ -17,21 +17,56 @@ pub trait VertexBufferBase {
     fn disable(&self);
 }
 
-/// A struct encapsulating an OpenGL vertex buffer object (VBO)
-pub struct VertexBuffer<T: GPUType>  {
+/// Enumeration describing the different buffer types
+enum BufferType {
+    /// A vertex buffer object (VBO)
+    VertexBuffer,
+    /// An index buffer used for indexed rendering
+    IndexBuffer
+}
+
+impl BufferType {
+    /// Retrieve binding point constant for given buffer type
+    pub fn binding_point(&self) -> GLuint {
+        match *self {
+            BufferType::VertexBuffer => gl::ARRAY_BUFFER,
+            BufferType::IndexBuffer => gl::ELEMENT_ARRAY_BUFFER
+        }
+    }
+}
+
+
+/// A struct encapsulating an OpenGL vertex or index buffer object
+pub struct Buffer<T: GPUType>  {
     /// The handle to the VBO
     handle: GlHandle,
     /// Phantom data instance, which is needed since we are not really directly
     /// using the type T
-    phantom: PhantomData<T>
+    phantom: PhantomData<T>,
+    /// Type of this buffer
+    buffer_type: BufferType
 }
 
-impl<T: GPUType> VertexBuffer<T> {
+impl<T: GPUType> Buffer<T> {
     /// Create new VBO with data copied from given source buffer.
-    pub fn new(data: &[T]) -> VertexBuffer<T> {
-        let vbo = VertexBuffer::<T> {
+    pub fn new_vertex_buffer(data: &[T]) -> Buffer<T> {
+        let vbo = Buffer::<T> {
             handle: Self::create_buffer(),
-            phantom: PhantomData
+            phantom: PhantomData,
+            buffer_type: BufferType::VertexBuffer
+        };
+
+        vbo.fill_data(data);
+
+        vbo
+    }
+    
+    /// Create new index buffer with given data
+    pub fn new_index_buffer(data: &[T]) -> Buffer<T> {
+        let vbo = Buffer::<T> {
+            handle: Self::create_buffer(),
+            phantom: PhantomData,
+            buffer_type: BufferType::IndexBuffer
         };
 
         vbo.fill_data(data);
@@ -53,36 +88,36 @@ impl<T: GPUType> VertexBuffer<T> {
     fn fill_data(&self, data: &[T]) {
         unsafe {
             // Make sure the buffer is actually active
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.handle);
+            gl::BindBuffer(self.buffer_type.binding_point(), self.handle);
 
             gl::BufferData(
-                gl::ARRAY_BUFFER,           // Target, in our case the currently active VBO
+                self.buffer_type.binding_point(),           // Target, in our case the currently active VBO
                 data.raw_length(),          // The total length of the buffer data, in bytes
                 data.to_buffer_raw_ptr(),   // Pointer to the data
                 gl::STATIC_DRAW             // Usage hint for the driver
             );
 
             // Unbind buffer
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindBuffer(self.buffer_type.binding_point(), 0);
         }
     }
 
     /// Bind this buffer to the array buffer target.
     pub fn enable_buffer(&self) {
         unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.handle);
+            gl::BindBuffer(self.buffer_type.binding_point(), self.handle);
         }
     }
 
     /// Unbind this buffer fromthe array buffer target.
     pub fn disable_buffer(&self) {
         unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindBuffer(self.buffer_type.binding_point(), 0);
         }
     }
 }
 
-impl<T> VertexBufferBase for VertexBuffer<T> where T: GPUType {
+impl<T> BufferBase for Buffer<T> where T: GPUType {
     fn enable(&self) {
         self.enable_buffer();
     }
