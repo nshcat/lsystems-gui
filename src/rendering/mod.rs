@@ -8,7 +8,9 @@ pub mod buffers;
 pub mod traits;
 pub mod materials;
 pub mod model;
+pub mod lighting;
 
+use crate::rendering::lighting::*;
 use nalgebra_glm::{Mat4, Vec3};
 
 /// Enumeration describing OpenGL value types
@@ -31,7 +33,9 @@ pub struct RenderParameters {
     /// The camera view matrix
     pub projection: Mat4,
     /// The model transformation matrix
-    pub model: Mat4
+    pub model: Mat4,
+    /// The current lighting context
+    pub lighting: LightingContext
 }
 
 impl RenderParameters {
@@ -41,7 +45,8 @@ impl RenderParameters {
             view: view,
             projection: proj,
             matrix_stack: Vec::new(),
-            model: Mat4::identity()
+            model: Mat4::identity(),
+            lighting: LightingContext::new_default()
         }
     }
 

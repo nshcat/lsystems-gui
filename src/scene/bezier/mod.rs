@@ -14,6 +14,7 @@ use crate::rendering::meshes::*;
 use crate::rendering::materials::*;
 use crate::rendering::traits::*;
 use crate::rendering::model::*;
+use crate::rendering::lighting::*;
 extern crate glfw;
 
 
@@ -50,7 +51,9 @@ pub struct BezierEditorScene {
     /// The indices of the patch, curve and point that is currently being dragged.
     dragged_point: Option<(usize, usize, usize)>,
     /// Whether we are currently dragging
-    in_drag: bool
+    in_drag: bool,
+    /// The scenes lights
+    lights: LightingContext
 }
 
 impl BezierEditorScene {
@@ -70,7 +73,7 @@ impl BezierEditorScene {
             control_point_models: Vec::new(),
             control_curve_meshes: Vec::new(),
             patch_approximations: Vec::new(),
-            draw_approximation: true,
+            draw_approximation: false,
             draw_control_curves: true,
             width: w,
             height: h,
@@ -78,7 +81,8 @@ impl BezierEditorScene {
             in_drag: false,
             drag_depth: None,
             drag_begin: None,
-            dragged_point: None
+            dragged_point: None,
+            lights: LightingContext::new_default()
         };
 
         scene.refresh_meshes();
@@ -130,11 +134,11 @@ impl BezierEditorScene {
 
     fn create_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
         let plane = PlaneGeometry::with_displacement(
-            30, 30, Vec3::new(0.4, 0.4, 0.4),
+            30, 30, Vec3::new(0.8, 0.8, 0.8),
             &|u, v| patch.evaluate(u, v)
         );
 
-        let mat = Box::new(SimpleMaterial::new());
+        let mat = Box::new(ShadedMaterial::new());
 
         let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &plane);
         mesh
@@ -281,6 +285,7 @@ impl Scene for BezierEditorScene {
     /// Render scene to screen. This also includes any GUI components.
     fn render(&self) {
         let mut rp = self.camera.to_render_parameters();
+        rp.lighting = self.lights.clone();
 
         for mesh in &self.meshes {
             mesh.render(&mut rp);
@@ -394,6 +399,52 @@ impl Scene for BezierEditorScene {
                     } else if let Some(i) = modified {
                         self.refresh_mesh_for(i);
                     }
+                }
+                if ui.collapsing_header(im_str!("Lighting"))
+                    .default_open(false)
+                    .build() {
+                    ui.indent();          
+
+                    {
+                        let mut data = [self.lights.ambient_intensity.x, self.lights.ambient_intensity.y, self.lights.ambient_intensity.z];
+
+                        if ui.drag_float3(im_str!("Ambient Light"), &mut data) 
+                            .min(0.0)
+                            .max(1.0)
+                            .display_format(im_str!("%.3lf"))
+                            .speed(0.06)
+                            .build() {
+                                self.lights.ambient_intensity = Vec3::new(data[0], data[1], data[2]);
+                        }
+                    }
+
+                    {
+                        let mut data = [self.lights.directional_light.x, self.lights.directional_light.y, self.lights.directional_light.z];
+
+                        if ui.drag_float3(im_str!("Directional Light Angle"), &mut data) 
+                            .min(-5.0)
+                            .max(5.0)
+                            .display_format(im_str!("%.3lf"))
+                            .speed(0.0006)
+                            .build() {
+                                self.lights.directional_light = Vec3::new(data[0], data[1], data[2]);
+                        }
+                    }   
+
+                    {
+                        let mut data = [self.lights.directional_intensity.x, self.lights.directional_intensity.y, self.lights.directional_intensity.z];
+
+                        if ui.drag_float3(im_str!("Directional Light Intensity"), &mut data) 
+                            .min(0.0)
+                            .max(1.0)
+                            .display_format(im_str!("%.3lf"))
+                            .speed(0.06)
+                            .build() {
+                                self.lights.directional_intensity = Vec3::new(data[0], data[1], data[2]);
+                        }
+                    }  
+
+                    ui.unindent();
                 }
 
                 if ui.collapsing_header(im_str!("Settings"))
