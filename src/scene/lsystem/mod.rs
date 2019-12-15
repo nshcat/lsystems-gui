@@ -21,7 +21,7 @@ use crate::scene::lsystem::normal_test_material::*;
 use crate::scene::lsystem::normal_color_test_material::*;
 
 mod bounding_box;
-mod normal_test_material;
+pub mod normal_test_material;
 mod normal_color_test_material;
 mod gui;
 
