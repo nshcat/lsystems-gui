@@ -7,6 +7,7 @@ pub mod meshes;
 pub mod buffers;
 pub mod traits;
 pub mod materials;
+pub mod model;
 
 use nalgebra_glm::{Mat4, Vec3};
 

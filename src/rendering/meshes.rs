@@ -27,6 +27,8 @@
 use nalgebra_glm::{Vec3, Mat4, UVec3};
 use std::mem::*;
 use std::any::Any;
+use std::f32::*;
+use std::cmp::*;
 use gl::types::*;
 use std::ptr::*;
 use std::collections::*;
@@ -522,6 +524,98 @@ impl BasicGeometry {
 impl Geometry for BasicGeometry {
     fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
         vec![&self.positions, &self.colors, &self.normals]
+    }
+}
+
+/// A geometry that generates a sphere. Uses GL_TRIANGLES
+pub struct SphereGeometry {
+    positions: AttributeArray<Vec3>,
+    colors: AttributeArray<Vec3>,
+    normals: AttributeArray<Vec3>,
+    indices: Vec<u32>
+}
+
+impl Geometry for SphereGeometry {
+    fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
+        vec![&self.positions, &self.colors, &self.normals]
+    }
+}
+
+impl IndexedGeometry for SphereGeometry {
+    fn retrieve_indices(&self) -> &[u32] {
+        &self.indices
+    }
+}
+
+impl SphereGeometry {
+    pub fn new(radius: f32, slices: u32, tiles: u32, color: Vec3) -> SphereGeometry {
+        let mut geom = SphereGeometry {
+            positions: AttributeArray::new(0, "position"),
+            colors: AttributeArray::new(1, "color"),
+            normals: AttributeArray::new(2, "normal"),
+            indices: Vec::new()
+        };
+
+        let dfi = consts::PI / (tiles as f32);
+        let dth = (2.0 * consts::PI) / (slices as f32);
+
+        let mut cs_fi = Vec::new();
+        let mut cs_th = Vec::new();
+        let mut sn_fi = Vec::new();
+        let mut sn_th = Vec::new();
+
+        let mut fi: f32 = 0.0;
+        let mut th: f32 = 0.0;
+
+        for _ in 0..= max(tiles, slices) {
+            cs_fi.push(fi.cos());
+            cs_th.push(th.cos());
+
+            sn_fi.push(fi.sin());
+            sn_th.push(th.sin());
+
+            fi = fi + dfi;
+            th = th + dth;
+        }
+
+
+        for i in 0..=tiles {
+            for j in 0..=slices {
+                let k = j % slices;
+
+                let normal = Vec3::new(
+                    sn_fi[i as usize] * cs_th[k as usize],
+                    sn_fi[i as usize] * sn_th[k as usize],
+                    cs_fi[i as usize]
+                );
+
+                let position = normal * radius;
+
+                geom.colors.local_buffer.push(color.clone());
+                geom.positions.local_buffer.push(position);
+                geom.normals.local_buffer.push(normal);
+            }
+        }
+
+        let mut offset: u32 = 0;
+
+        for j in 0..tiles {
+            for i in 1..slices {
+                let idx = i + offset;
+
+                geom.indices.push(idx - 1);
+                geom.indices.push(idx + slices - 1);
+                geom.indices.push(idx);
+
+
+                geom.indices.push(idx);
+                geom.indices.push(idx + slices - 1);
+                geom.indices.push(idx + slices);
+            }
+            offset = offset + slices;
+        }
+
+        geom
     }
 }
 

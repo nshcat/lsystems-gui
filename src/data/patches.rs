@@ -56,7 +56,7 @@ impl BezierPatchParameters {
         }
     }
 
-    /// Evalute the patch at given UV position in [0,1]x[0,1].
+    /// Evalute the patch at given UV position in [0,1]x[0,1].
     pub fn evaluate(&self, u: f32, v: f32) -> Vec3 {
         let curve0 = &self.curves[0];
         let curve1 = &self.curves[1];

@@ -1,6 +1,11 @@
 use std::fmt::*;
 use imgui::*;
-use nalgebra_glm::Vec3;
+use nalgebra_glm::*;
+use ncollide3d::*;
+use ncollide3d::math::*;
+use ncollide3d::query::*;
+use gl::*;
+extern crate nalgebra;
 use crate::scene::*;
 use crate::data::patches::*;
 use crate::rendering::*;
@@ -8,6 +13,7 @@ use crate::rendering::camera::*;
 use crate::rendering::meshes::*;
 use crate::rendering::materials::*;
 use crate::rendering::traits::*;
+use crate::rendering::model::*;
 extern crate glfw;
 
 
@@ -22,7 +28,7 @@ pub struct BezierEditorScene {
     /// All meshes to render.
     meshes: Vec<Mesh>,
     /// Control point visualisation
-    control_point_meshes: Vec<Mesh>,
+    control_point_models: Vec<MultiModel>,
     /// Control curve visualisation
     control_curve_meshes: Vec<Mesh>,
     /// Point clouds approximating the patch (for debugging purposes)
@@ -31,21 +37,48 @@ pub struct BezierEditorScene {
     draw_approximation: bool,
     /// Whether to draw the control curves
     draw_control_curves: bool,
+    /// Screen width
+    width: u32,
+    /// Screen height
+    height: u32,
+    /// The sphere mesh used to visualize the control points. Its shared with all control point models.
+    sphere_mesh: Rc<Box<Mesh>>,
+    /// Where the mouse drag started
+    drag_begin: Option<(u32, u32)>,
+    /// Depth of the point we are dragging
+    drag_depth: Option<f32>,
+    /// The indices of the patch, curve and point that is currently being dragged.
+    dragged_point: Option<(usize, usize, usize)>,
+    /// Whether we are currently dragging
+    in_drag: bool
 }
 
 impl BezierEditorScene {
     pub fn new(model: RcCell<BezierModelParameters>, w: u32, h: u32) -> BezierEditorScene {
+        let mat = Box::new(SimpleMaterial::new());
+        let sphere_geom = SphereGeometry::new(0.01, 40, 40, Vec3::new(1.0, 1.0, 1.0));
+
+        let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &sphere_geom);
+        mesh.draw_wireframe = false;
+
         let working_copy = model.borrow().clone();
         let mut scene = BezierEditorScene {
             working_copy: working_copy,
             model: model,
             camera: Camera::new(w, h, ProjectionType::Perspective(75.0)),
             meshes: Vec::new(),
-            control_point_meshes: Vec::new(),
+            control_point_models: Vec::new(),
             control_curve_meshes: Vec::new(),
             patch_approximations: Vec::new(),
             draw_approximation: true,
-            draw_control_curves: true
+            draw_control_curves: true,
+            width: w,
+            height: h,
+            sphere_mesh: Rc::new(Box::new(mesh)),
+            in_drag: false,
+            drag_depth: None,
+            drag_begin: None,
+            dragged_point: None
         };
 
         scene.refresh_meshes();
@@ -62,8 +95,8 @@ impl BezierEditorScene {
         let mesh = self.create_mesh(patch);
         self.meshes[index] = mesh;
 
-        let control_point_mesh = self.create_control_point_mesh(patch);
-        self.control_point_meshes[index] = control_point_mesh;
+        let control_point_model = self.create_control_point_model(patch);
+        self.control_point_models[index] = control_point_model;
 
         let control_curve_mesh = self.create_control_curve_mesh(patch);
         self.control_curve_meshes[index] = control_curve_mesh;
@@ -75,15 +108,23 @@ impl BezierEditorScene {
     /// Refresh all patch meshes
     fn refresh_meshes(&mut self) {
         self.meshes = Vec::new();
-        self.control_point_meshes = Vec::new();
-        self.control_curve_meshes = Vec::new();
         self.patch_approximations = Vec::new();
 
         for patch in &self.working_copy.patches {
             self.meshes.push(self.create_mesh(patch));
-            self.control_point_meshes.push(self.create_control_point_mesh(patch));
-            self.control_curve_meshes.push(self.create_control_curve_mesh(patch));
             self.patch_approximations.push(self.create_point_cloud(patch));
+        }
+
+        self.refresh_control_meshes();
+    }
+
+    fn refresh_control_meshes(&mut self) {
+        self.control_point_models = Vec::new();
+        self.control_curve_meshes = Vec::new();
+
+        for patch in &self.working_copy.patches {
+            self.control_point_models.push(self.create_control_point_model(patch));
+            self.control_curve_meshes.push(self.create_control_curve_mesh(patch));
         }
     }
 
@@ -99,27 +140,25 @@ impl BezierEditorScene {
         mesh
     }
 
-    fn create_control_point_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
-        let mut points = Vec::new();
-
+    fn create_control_point_model(& self, patch: &BezierPatchParameters) -> MultiModel { 
+        let mut spheres = Vec::new();
+        
         for curve in &patch.curves {
             for i in 0..4 {
-                points.push(curve.control_points[i].clone());
+                let point = curve.control_points[i].clone();
+
+                spheres.push(
+                    Model::with_position(self.sphere_mesh.clone(), &point)
+                );
             }
         }
 
-        let mut geom = BasicGeometry::new();
-        geom.colors.local_buffer = vec![Vec3::new(1.0, 1.0, 1.0); points.len()];
-        geom.normals.local_buffer = vec![Vec3::new(0.0, 0.0, 0.0); points.len()];
-        geom.positions.local_buffer = points;
-
-        let mat = Box::new(SimpleMaterial::new());
-
-        let mut mesh = Mesh::new(PrimitiveType::Points, mat, &geom);
-        mesh.point_size = 3.0;
-
-        mesh
+        MultiModel {
+            models: spheres
+        }
     }
+
+
 
     fn create_control_curve_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
         let mut points = Vec::new();
@@ -168,6 +207,78 @@ impl BezierEditorScene {
 
         mesh
     }
+
+    /// Unproject a given window position to a point in world space
+    fn unproject(&self, x: u32, y: u32, depth: f32) -> Vec3 {
+        unproject(
+            &Vec3::new(x as _, (self.height - y) as _, depth),
+            &self.camera.view,
+            &self.camera.projection,
+            Vec4::new(0.0, 0.0, self.width as _, self.height as _)
+        )
+    }
+
+    /// Returns clicked control point and its depth
+    fn find_clicked_control_point(&mut self, x: u32, y: u32) -> Option<(&mut Vec3, f32)> {
+
+        println!("Screen pos {} {}", x, y);
+
+        // Retrieve depth value
+        let mut depth: f32 = 0.0;
+        unsafe {
+            gl::ReadPixels(
+                x as _,
+                (self.height - y) as _,
+                1 as _,
+                1 as _,
+                gl::DEPTH_COMPONENT,
+                gl::FLOAT,
+                &mut depth as *mut f32 as _
+            );
+        }
+
+        let position = self.unproject(x, y, depth);
+
+        println!("Unprojected position {} {} {}", position.x, position.y, position.z);
+
+        // We now have the rough position. We now have to intersect a ball around it with the balls around all
+        // the other control points to find the closest point to it.
+
+        // The sphere used for all points
+        let sphere = shape::Ball::<f32>::new(0.01);
+        
+        // Create translation for ball around point
+        let position_isometry = Isometry::new(position.clone(), nalgebra::zero());    
+
+        // Collect intersection results
+        let mut control_point: Option<&mut Vec3> = None;
+
+        for patch in &mut self.working_copy.patches {
+            for curve in &mut patch.curves {
+                for point in &mut curve.control_points {
+                    let translation = Isometry::new(point.clone(), nalgebra::zero());
+
+                    let result = proximity(
+                        &position_isometry, &sphere,
+                        &translation, &sphere, 0.01);
+
+                    match result {
+                        Proximity::Intersecting => {
+                            control_point = Some(point);
+                            break;
+                        },
+                        _ => {}
+                    };
+                }
+            }
+        }
+
+        if let Some(p) = control_point {
+            return Some((p, depth));
+        }
+
+        return None;
+    }
 }
 
 impl Scene for BezierEditorScene {
@@ -176,10 +287,6 @@ impl Scene for BezierEditorScene {
         let mut rp = self.camera.to_render_parameters();
 
         for mesh in &self.meshes {
-            mesh.render(&mut rp);
-        }
-
-        for mesh in &self.control_point_meshes {
             mesh.render(&mut rp);
         }
 
@@ -193,6 +300,10 @@ impl Scene for BezierEditorScene {
             for mesh in &self.patch_approximations {
                 mesh.render(&mut rp);
             }
+        }
+
+        for model in &self.control_point_models {
+            model.render(&mut rp);
         }
     }
 
@@ -325,11 +436,60 @@ impl Scene for BezierEditorScene {
 
     /// Handle input event. This is only called if the UI does not want to grab input.
     fn handle_event(&mut self, window: &glfw::Window, event: &glfw::WindowEvent) {
-        self.camera.handle_event(window, event);
+        // MouseButton(MouseButton, Action, Modifiers)
+        match event {
+            glfw::WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Press, _) => {
+                let (x, y) = window.get_cursor_pos();
+                if let Some((_, d)) = self.find_clicked_control_point(x as _, y as _) {
+                    self.drag_begin = Some((x as _, y as _));
+                    self.drag_depth = Some(d);
+                    self.in_drag = true;
+                }
+            },
+            glfw::WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Release, _) => {
+                if self.in_drag {
+                    self.in_drag = false;
+                    self.refresh_meshes();
+                }
+            },
+            glfw::WindowEvent::CursorPos(x, y) => {
+                if self.in_drag {
+                    // If we are in drag, we project the new mouse screen position into the scene with the same
+                    // depth as the control point at the old position, and use that new 3D position
+                    // as our new control position.
+
+                    let mut modified = false;
+
+                    let curX = *x as u32;
+                    let curY = *y as u32;
+
+                    let (oldX, oldY) = self.drag_begin.unwrap();
+                    let new_point = self.unproject(curX, curY, self.drag_depth.unwrap());
+                    if let Some((p, d)) = self.find_clicked_control_point(oldX, oldY) {
+                        *p = new_point.clone();
+
+                        modified = true;
+                    }
+                    self.drag_begin = Some((curX, curY));
+
+                    if modified {
+                        self.refresh_control_meshes();
+                    }
+                }
+            },
+            _ => {}
+        };
+
+        if !self.in_drag {
+            self.camera.handle_event(window, event);
+        }
     }
 
     /// Handle window resize event.
     fn handle_resize(&mut self, w: u32, h: u32) {
         self.camera.update(w, h);
+
+        self.width = w;
+        self.height = h;
     }
 }
