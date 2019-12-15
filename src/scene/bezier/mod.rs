@@ -248,6 +248,8 @@ impl BezierEditorScene {
         // Collect intersection results
         let mut control_point: Option<&mut Vec3> = None;
 
+        // We check if a sphere around the clicked point intersects which spheres around any of the
+        // control points, in order to retrieve which of the control points is the clicked one.
         for (i, patch) in self.working_copy.patches.iter().enumerate() {
             for (j, curve) in patch.curves.iter().enumerate() {
                 for k in 0..4 {
@@ -255,6 +257,8 @@ impl BezierEditorScene {
 
                     let translation = Isometry::new(point.clone(), nalgebra::zero());
 
+                    // TODO: it could be multiple intersections. Calculate actual center distance for each, 
+                    // and return point with lowest value.
                     let result = proximity(
                         &position_isometry, &sphere,
                         &translation, &sphere, 0.01);
@@ -432,6 +436,8 @@ impl Scene for BezierEditorScene {
         match event {
             glfw::WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Press, _) => {
                 let (x, y) = window.get_cursor_pos();
+                // If the user has clicked on one of the control points of the bezier patch, start
+                // drag process.
                 if let Some((d, i, j, k)) = self.find_clicked_control_point(x as _, y as _) {
                     self.drag_begin = Some((x as _, y as _));
                     self.drag_depth = Some(d);
@@ -473,6 +479,7 @@ impl Scene for BezierEditorScene {
             _ => {}
         };
 
+        // We do not want to move the camera when the user is currently dragging a control point.
         if !self.in_drag {
             self.camera.handle_event(window, event);
         }
