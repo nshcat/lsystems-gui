@@ -219,10 +219,7 @@ impl BezierEditorScene {
     }
 
     /// Returns clicked control point and its depth
-    fn find_clicked_control_point(&mut self, x: u32, y: u32) -> Option<(&mut Vec3, f32)> {
-
-        println!("Screen pos {} {}", x, y);
-
+    fn find_clicked_control_point(&mut self, x: u32, y: u32) -> Option<(f32, usize, usize, usize)> {
         // Retrieve depth value
         let mut depth: f32 = 0.0;
         unsafe {
@@ -239,8 +236,6 @@ impl BezierEditorScene {
 
         let position = self.unproject(x, y, depth);
 
-        println!("Unprojected position {} {} {}", position.x, position.y, position.z);
-
         // We now have the rough position. We now have to intersect a ball around it with the balls around all
         // the other control points to find the closest point to it.
 
@@ -253,9 +248,11 @@ impl BezierEditorScene {
         // Collect intersection results
         let mut control_point: Option<&mut Vec3> = None;
 
-        for patch in &mut self.working_copy.patches {
-            for curve in &mut patch.curves {
-                for point in &mut curve.control_points {
+        for (i, patch) in self.working_copy.patches.iter().enumerate() {
+            for (j, curve) in patch.curves.iter().enumerate() {
+                for k in 0..4 {
+                    let point = &curve.control_points[k];
+
                     let translation = Isometry::new(point.clone(), nalgebra::zero());
 
                     let result = proximity(
@@ -264,17 +261,12 @@ impl BezierEditorScene {
 
                     match result {
                         Proximity::Intersecting => {
-                            control_point = Some(point);
-                            break;
+                            return Some((depth, i, j, k));
                         },
                         _ => {}
                     };
                 }
             }
-        }
-
-        if let Some(p) = control_point {
-            return Some((p, depth));
         }
 
         return None;
@@ -440,10 +432,11 @@ impl Scene for BezierEditorScene {
         match event {
             glfw::WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Press, _) => {
                 let (x, y) = window.get_cursor_pos();
-                if let Some((_, d)) = self.find_clicked_control_point(x as _, y as _) {
+                if let Some((d, i, j, k)) = self.find_clicked_control_point(x as _, y as _) {
                     self.drag_begin = Some((x as _, y as _));
                     self.drag_depth = Some(d);
                     self.in_drag = true;
+                    self.dragged_point = Some((i, j, k));
                 }
             },
             glfw::WindowEvent::MouseButton(glfw::MouseButton::Button1, glfw::Action::Release, _) => {
@@ -454,26 +447,26 @@ impl Scene for BezierEditorScene {
             },
             glfw::WindowEvent::CursorPos(x, y) => {
                 if self.in_drag {
-                    // If we are in drag, we project the new mouse screen position into the scene with the same
-                    // depth as the control point at the old position, and use that new 3D position
-                    // as our new control position.
+                    // If the user drags the cursor outside of the window, stop dragging process.
+                    if *x >= 0.0 && *x <= (self.width as f64) && *y >= 0.0 && *y <= (self.height as f64) {
+                        // If we are in drag, we project the new mouse screen position into the scene with the same
+                        // depth as the control point at the old position, and use that new 3D position
+                        // as our new control position.
+                        let curX = *x as u32;
+                        let curY = *y as u32;
 
-                    let mut modified = false;
-
-                    let curX = *x as u32;
-                    let curY = *y as u32;
-
-                    let (oldX, oldY) = self.drag_begin.unwrap();
-                    let new_point = self.unproject(curX, curY, self.drag_depth.unwrap());
-                    if let Some((p, d)) = self.find_clicked_control_point(oldX, oldY) {
+                        let (oldX, oldY) = self.drag_begin.unwrap();
+                        let new_point = self.unproject(curX, curY, self.drag_depth.unwrap());
+                        
+                        let (i, j, k) = self.dragged_point.unwrap();
+                        let p = &mut self.working_copy.patches[i].curves[j].control_points[k];
                         *p = new_point.clone();
-
-                        modified = true;
-                    }
-                    self.drag_begin = Some((curX, curY));
-
-                    if modified {
-                        self.refresh_control_meshes();
+            
+                        self.drag_begin = Some((curX, curY));            
+                        self.refresh_control_meshes();  
+                    } else {
+                        self.in_drag = false;
+                        self.refresh_meshes();
                     }
                 }
             },
