@@ -7,7 +7,7 @@ use crate::data;
 use crate::data::patches::*;
 use crate::data::*;
 use lsystems_core::drawing::types::*;
-use lsystems_core::drawing::DrawOperation;
+use lsystems_core::drawing::TurtleCommand;
 use nfd::*;
 use std::fs::*;
 
@@ -223,28 +223,28 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
     outer_id.pop(ui);
 }
 
-fn index_to_operation(index: usize) -> DrawOperation {
+fn index_to_operation(index: usize) -> TurtleCommand {
     match index {
-        0 => DrawOperation::Forward,
-        1 => DrawOperation::ForwardNoDraw,
-        2 => DrawOperation::TurnRight,
-        3 => DrawOperation::TurnLeft,
-        4 => DrawOperation::SaveState,
-        5 => DrawOperation::LoadState,
-        6 => DrawOperation::Ignore,
-        7 => DrawOperation::ForwardContracting,
-        8 => DrawOperation::PitchDown,
-        9 => DrawOperation::PitchUp,
-        10 => DrawOperation::RollLeft,
-        11 => DrawOperation::RollRight,
-        12 => DrawOperation::TurnAround,
-        13 => DrawOperation::BeginPolygon,
-        14 => DrawOperation::EndPolygon,
-        15 => DrawOperation::SubmitVertex,
-        16 => DrawOperation::IncrementColor,
-        17 => DrawOperation::DecrementColor,
-        18 => DrawOperation::IncrementLineWidth,
-        19 => DrawOperation::DecrementLineWidth,
+        0 => TurtleCommand::Forward,
+        1 => TurtleCommand::ForwardNoDraw,
+        2 => TurtleCommand::TurnRight,
+        3 => TurtleCommand::TurnLeft,
+        4 => TurtleCommand::SaveState,
+        5 => TurtleCommand::LoadState,
+        6 => TurtleCommand::Ignore,
+        7 => TurtleCommand::ForwardContracting,
+        8 => TurtleCommand::PitchDown,
+        9 => TurtleCommand::PitchUp,
+        10 => TurtleCommand::RollLeft,
+        11 => TurtleCommand::RollRight,
+        12 => TurtleCommand::TurnAround,
+        13 => TurtleCommand::BeginPolygon,
+        14 => TurtleCommand::EndPolygon,
+        15 => TurtleCommand::SubmitVertex,
+        16 => TurtleCommand::IncrementColor,
+        17 => TurtleCommand::DecrementColor,
+        18 => TurtleCommand::IncrementLineWidth,
+        19 => TurtleCommand::DecrementLineWidth,
         _ => panic!("Unknown draw operation value")
     }
 }
@@ -447,7 +447,7 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemScene) {
         params.interpretations.push(
             Interpretation{
                 symbol: None,
-                operation: DrawOperation::Forward
+                operation: TurtleCommand::Forward
             }
         );
 

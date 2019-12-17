@@ -6,7 +6,7 @@ use std::string::*;
 use std::collections::*;
 use nalgebra_glm::Vec3;
 use lsystems_core::*;
-use lsystems_core::drawing::{DrawingParameters, DrawOperation};
+use lsystems_core::drawing::{DrawingParameters, TurtleCommand};
 use crate::data::patches::*;
 
 
@@ -21,7 +21,7 @@ pub mod patches;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Interpretation {
 	pub symbol: Option<char>,
-	pub operation: DrawOperation
+	pub operation: TurtleCommand
 }
 
 /// Struct containing application-wide settings

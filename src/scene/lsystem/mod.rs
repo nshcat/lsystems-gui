@@ -109,12 +109,12 @@ impl LSystemScene {
             Vec3::new(vec.x as _, vec.y as _, vec.z as _)
         }
 
-        for line in &lsystem.line_segments {
+        for line in &lsystem.drawing_result.line_segments {
             vertices.push(convert_vector(&line.begin));
             vertices.push(convert_vector(&line.end));
         }
 
-        for poly in &lsystem.polygons {
+        for poly in &lsystem.drawing_result.polygons {
             for vertex in &poly.vertices {
                 vertices.push(convert_vector(vertex));
             }
@@ -216,11 +216,11 @@ impl LSystemScene {
 
     /// Apply interpretations in the lsystem parameters to the current lsystem instance
     fn apply_interpretations(&mut self) {
-        self.lsystem.interpretations.clear();
+        self.lsystem.interpretation_engine.clear();
 
         for interpretation in &self.lsystem_params.interpretations {
             if let Some(symbol) = interpretation.symbol {
-                self.lsystem.interpretations.associate(symbol, interpretation.operation);
+                self.lsystem.interpretation_engine.associate(symbol, interpretation.operation);
             }
         }
     }
@@ -272,11 +272,11 @@ impl LSystemScene {
         lsystem.set_iteration_depth(params.iteration_depth);
         lsystem.set_drawing_parameters(&params.drawing_parameters);
         lsystem.parse(&params.axiom, &params.rules.join("\n"));
-        lsystem.engine.set_seed(params.seed);
+        lsystem.iteration_engine.set_seed(params.seed);
 
         for interp in &params.interpretations {
             if let Some(symbol) = interp.symbol {
-                lsystem.interpretations.associate(symbol, interp.operation);
+                lsystem.interpretation_engine.associate(symbol, interp.operation);
             }
         }
     }
@@ -314,7 +314,7 @@ impl LSystemScene {
             Vec3::new(vec.x as _, vec.y as _, vec.z as _)
         }
 
-        for segment in &lsystem.line_segments {
+        for segment in &lsystem.drawing_result.line_segments {
             // Lookup color
             let color_index = if segment.color >= lsystem.parameters.color_palette_size as _ { 
                 lsystem.parameters.color_palette_size - 1
@@ -341,7 +341,7 @@ impl LSystemScene {
     fn retrieve_polygon_meshes(lsystem: &LSystem, params: &LSystemParameters, settings: &ApplicationSettings) -> Vec<Mesh> {
         let mut meshes = Vec::new();
 
-        for polygon in &lsystem.polygons {
+        for polygon in &lsystem.drawing_result.polygons {
             let color = if params.color_palette.len() > 0 {
                 params.color_palette[polygon.color as usize]
             } else {
