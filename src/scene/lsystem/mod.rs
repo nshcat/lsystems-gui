@@ -24,6 +24,7 @@ mod bounding_box;
 pub mod normal_test_material;
 mod normal_color_test_material;
 mod gui;
+mod patch_management;
 
 /// A struct managing the currently displayed LSystem and providing methods
 /// to update certain parts of it.
