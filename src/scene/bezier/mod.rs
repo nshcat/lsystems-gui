@@ -34,12 +34,8 @@ pub struct BezierEditorScene {
     control_point_models: Vec<MultiModel>,
     /// Control curve visualisation
     control_curve_meshes: Vec<Mesh>,
-    /// Point clouds approximating the patch (for debugging purposes)
-    patch_approximations: Vec<Mesh>,
     /// Normal vector visualisations
     normal_vector_vis: Vec<Mesh>,
-    /// Whether to draw the point cloud approximation
-    draw_approximation: bool,
     /// Whether to draw the control curves
     draw_control_curves: bool,
     /// Whether to draw the normal vectors
@@ -78,9 +74,7 @@ impl BezierEditorScene {
             meshes: Vec::new(),
             control_point_models: Vec::new(),
             control_curve_meshes: Vec::new(),
-            patch_approximations: Vec::new(),
             normal_vector_vis: Vec::new(),
-            draw_approximation: false,
             draw_control_curves: true,
             width: w,
             height: h,
@@ -113,9 +107,6 @@ impl BezierEditorScene {
         let control_curve_mesh = self.create_control_curve_mesh(patch);
         self.control_curve_meshes[index] = control_curve_mesh;
 
-        let point_cloud_mesh = self.create_point_cloud(patch);
-        self.patch_approximations[index] = point_cloud_mesh;
-
         if self.draw_normal_vectors {
             let normal_mesh = self.create_normal_mesh(patch);
             self.normal_vector_vis[index] = normal_mesh;
@@ -125,12 +116,10 @@ impl BezierEditorScene {
     /// Refresh all patch meshes
     fn refresh_meshes(&mut self) {
         self.meshes = Vec::new();
-        self.patch_approximations = Vec::new();
         self.normal_vector_vis = Vec::new();
 
         for patch in &self.working_copy.patches {
             self.meshes.push(self.create_mesh(patch));
-            self.patch_approximations.push(self.create_point_cloud(patch));
 
             if self.draw_normal_vectors {
                 self.normal_vector_vis.push(self.create_normal_mesh(patch));
@@ -202,31 +191,6 @@ impl BezierEditorScene {
         let mat = Box::new(SimpleMaterial::new());
 
         let mut mesh = Mesh::new(PrimitiveType::Lines, mat, &geom);
-
-        mesh
-    }
-
-    fn create_point_cloud(&self, patch: &BezierPatchParameters) -> Mesh {
-        let points_x = 60;
-        let points_y = 60;
-
-        let mut points = Vec::new();
-
-        for y in 0..60 {
-            for x in 0..60 {
-                points.push(patch.evaluate((x as f32) / (points_x as f32), (y as f32) / (points_y as f32)));
-            }
-        }
-
-        let mut geom = BasicGeometry::new();
-        geom.colors.local_buffer = vec![Vec3::new(0.0, 0.0, 1.0); points.len()];
-        geom.normals.local_buffer = vec![Vec3::new(0.0, 0.0, 0.0); points.len()];
-        geom.positions.local_buffer = points;
-
-        let mat = Box::new(SimpleMaterial::new());
-
-        let mut mesh = Mesh::new(PrimitiveType::Points, mat, &geom);
-        mesh.point_size = 2.0;
 
         mesh
     }
@@ -312,12 +276,6 @@ impl Scene for BezierEditorScene {
 
         if self.draw_control_curves {
             for mesh in &self.control_curve_meshes {
-                mesh.render(&mut rp);
-            }
-        }
-
-        if self.draw_approximation {
-            for mesh in &self.patch_approximations {
                 mesh.render(&mut rp);
             }
         }
@@ -476,7 +434,6 @@ impl Scene for BezierEditorScene {
                     ui.indent();          
 
                     ui.checkbox(im_str!("Draw control curves"), &mut self.draw_control_curves);
-                    ui.checkbox(im_str!("Draw point cloud approximation"), &mut self.draw_approximation);
 
                     if ui.checkbox(im_str!("Draw normal vectors"), &mut self.draw_normal_vectors) {
                         self.refresh_meshes();
