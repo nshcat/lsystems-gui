@@ -218,6 +218,9 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
             // Remove mesh from manager, if the symbol was not empty.
             let id = system.lsystem_params.bezier_models[i].symbol;
 
+            // Remove model parameters from lsystem parameters.
+            system.lsystem_params.bezier_models.remove(i);
+
             if let Some(id) = id {
                 system.bezier_manager.remove_meshes(id);
 
@@ -236,8 +239,6 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
                 // Refresh view
                 system.refresh_bezier_models();
             }
-
-            system.lsystem_params.bezier_models.remove(i);
         }
         _ => {}
     };

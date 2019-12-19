@@ -195,6 +195,7 @@ impl LSystemScene {
 
 
     pub fn force_refresh_all(&mut self) {
+        self.bezier_manager = BezierMeshManager::from_parameters(&self.lsystem_params.bezier_models);
         self.lsystem.set_drawing_parameters(&self.lsystem_params.drawing_parameters);
         self.lsystem.set_iteration_depth(self.lsystem_params.iteration_depth);
         self.apply_interpretations();
