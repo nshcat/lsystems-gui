@@ -24,13 +24,24 @@ impl BezierMeshManager {
         }
     }
 
+    /// Construct from initial set of model parameters
+    pub fn from_parameters(models: &[BezierModelParameters]) -> BezierMeshManager {
+        let mut manager = Self::new();
+
+        for model in models {
+            manager.update_meshes(model);
+        }
+
+        manager
+    }
+
     /// Update stored patch meshes for bezier model with given identifier. Will create a new entry
     /// if it does not already exist.
-    pub fn update_patch(&mut self, parameters: &BezierModelParameters) {
+    pub fn update_meshes(&mut self, parameters: &BezierModelParameters) {
         // Ignore models that dont have any parameters set
         if let Some(identifier) = parameters.symbol {
             // If there is already an entry for this identifier, remove that entry. Its obsolete.
-            if self.has_patch(identifier) {
+            if self.has_meshes(identifier) {
                 self.mesh_map.remove(&identifier);     
             }
 
@@ -38,8 +49,23 @@ impl BezierMeshManager {
         }   
     }
 
+    /// Remove meshes for given bezier model
+    pub fn remove_meshes(&mut self, identifier: char) {
+        if self.has_meshes(identifier) {
+            self.mesh_map.remove(&identifier);
+        }
+    }
+
+    /// Rename bezier model. This avoids regenerating the mesh.
+    pub fn rename_meshes(&mut self, old: char, new: char) {
+        if self.has_meshes(old) {
+            let meshes = self.mesh_map.remove(&old).unwrap();
+            self.mesh_map.insert(new, meshes);
+        }
+    }
+
     /// Check if a bezier model with given identifier is known.
-    pub fn has_patch(&self, identifier: char) -> bool {
+    pub fn has_meshes(&self, identifier: char) -> bool {
         self.mesh_map.contains_key(&identifier)
     }
 

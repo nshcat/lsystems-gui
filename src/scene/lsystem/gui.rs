@@ -130,7 +130,7 @@ fn draw_operations() -> Vec<&'static ImStr> {
 
 fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction) {
 
-    let mut modified = false;
+    //let mut to_rename: Option<(usize, char, char)> = None;
     let mut to_delete: Option<usize> = None;
     let mut to_edit: Option<usize> = None;
 
@@ -149,6 +149,9 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
 
         let token = ui.push_item_width(20.0);
 
+        // Save the old symbol for later renaming
+        let old_symbol = model.symbol;
+
         if ui.input_text(im_str!("##sym"), &mut symbol_str).build() {
             let trimmed = symbol_str.to_str().trim();
             if trimmed.is_empty() {
@@ -157,7 +160,20 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
                 model.symbol = Some(trimmed.chars().next().unwrap());
             }
 
-            modified = true;
+            if let Some(old_symbol) = old_symbol {
+                // Case 1: Simple rename
+                if let Some(new_symbol) = model.symbol {
+                    system.bezier_manager.rename_meshes(old_symbol, new_symbol);
+                } else if let None = model.symbol {
+                    // Case 2: Removed symbol
+                    system.bezier_manager.remove_meshes(old_symbol);
+                }
+            } else {
+                // Case 3: Has gotten a name when it didnt have one before
+                if let Some(new_symbol) = model.symbol {
+                    system.bezier_manager.update_meshes(model);
+                }
+            }
         }
 
         token.pop(ui);
@@ -177,7 +193,6 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
         ui.same_line(0.0);
 
         if ui.button(im_str!("-"), [0.0, 0.0]) {
-            modified = true;
             to_delete = Some(i);
         }
         
@@ -200,6 +215,28 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
 
     match to_delete {
         Some(i) => {
+            // Remove mesh from manager, if the symbol was not empty.
+            let id = system.lsystem_params.bezier_models[i].symbol;
+
+            if let Some(id) = id {
+                system.bezier_manager.remove_meshes(id);
+
+                // Search if there is another bezier model with the same identifier. 
+                // This improves UX by automatically loading the meshes for it. Otherwise the user
+                // would need to refresh the identifier for the other model.
+                for model in &system.lsystem_params.bezier_models {
+                    if let Some(other_id) = model.symbol {
+                        if other_id == id {
+                            system.bezier_manager.update_meshes(model);
+                            break;
+                        }
+                    }
+                }
+
+                // Refresh view
+                system.refresh_bezier_models();
+            }
+
             system.lsystem_params.bezier_models.remove(i);
         }
         _ => {}
@@ -213,10 +250,11 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
     ]);
 
     if ui.button(im_str!("+"), [0.0, 0.0]) {
+        // We do not have to refresh anything here, since per default, the models have an
+        // empty identifier. This means their mesh is not generated.
         system.lsystem_params.bezier_models.push(
             BezierModelParameters::empty()
         );
-        modified = true;
     }
 
     colors.pop(ui);
