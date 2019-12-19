@@ -661,15 +661,18 @@ impl PlaneGeometry {
             }
         }
 
-        let normals = NormalGenerator::generate_indexed_normals(
-            PrimitiveType::TriangleStrip,
-            &plane.positions.local_buffer,
-            &plane.indices
-        );
-
-        plane.normals.local_buffer = normals;
-
+        plane.regenerate_normals();
+        
         plane
+    }
+
+    /// Regenerate all vertex normals.
+    pub fn regenerate_normals(&mut self) {
+        self.normals.local_buffer = NormalGenerator::generate_indexed_normals(
+            PrimitiveType::TriangleStrip,
+            &self.positions.local_buffer,
+            &self.indices
+        );
     }
 
     /// Create a new plane geometry

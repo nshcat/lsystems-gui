@@ -4,7 +4,7 @@ use crate::scene::lsystem::*;
 use crate::scene::*;
 use crate::scene::bezier::*;
 use crate::data;
-use crate::data::patches::*;
+use crate::data::bezier::*;
 use crate::data::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::TurtleCommand;

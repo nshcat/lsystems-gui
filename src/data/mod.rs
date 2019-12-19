@@ -7,11 +7,11 @@ use std::collections::*;
 use nalgebra_glm::Vec3;
 use lsystems_core::*;
 use lsystems_core::drawing::{DrawingParameters, TurtleCommand};
-use crate::data::patches::*;
+use crate::data::bezier::*;
 
 
 pub mod presets;
-pub mod patches;
+pub mod bezier;
 
 
 

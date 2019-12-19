@@ -18,7 +18,6 @@ mod data;
 mod scene;
 
 use crate::data::*;
-use crate::data::patches::*;
 use crate::scene::*;
 use crate::scene::lsystem::*;
 

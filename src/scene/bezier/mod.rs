@@ -7,7 +7,7 @@ use ncollide3d::query::*;
 use gl::*;
 extern crate nalgebra;
 use crate::scene::*;
-use crate::data::patches::*;
+use crate::data::bezier::*;
 use crate::rendering::*;
 use crate::rendering::camera::*;
 use crate::rendering::meshes::*;

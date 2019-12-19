@@ -9,7 +9,7 @@ use lsystems_core::drawing::types::*;
 use serde_json::*;
 
 use crate::data::*;
-use crate::data::patches::*;
+use crate::data::bezier::*;
 use crate::rendering::*;
 use crate::rendering::camera::*;
 use crate::rendering::meshes::*;

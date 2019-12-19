@@ -9,6 +9,7 @@ pub mod traits;
 pub mod materials;
 pub mod model;
 pub mod lighting;
+pub mod bezier;
 
 use crate::rendering::lighting::*;
 use nalgebra_glm::{Mat4, Vec3};
