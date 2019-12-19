@@ -7,9 +7,9 @@ use std::rc::*;
 /// Mesh manager that can either take full ownership of a meshes or just store a reference
 /// counted pointer to one
 enum MeshStorage {
-	/// Storage manages ref counted pointers to meshes.
+	/// The storage manages ref counted pointers to meshes.
 	/// This allows meshes to be shared between multiple models.
-	RefCounted{ meshes: Vec<Rc<Box<Mesh>>> },
+	RefCounted{ meshes: Vec<Rc<Mesh>> },
 	/// The storage is the sole owner of the meshes.
 	Owned{ meshes: Vec<Mesh> }
 }
@@ -37,16 +37,73 @@ impl Render for MeshStorage {
 /// of meshes between multiple models.
 pub struct Model {
     /// Storage instance managing the meshes associated with this model
-    pub storage: MeshStorage,
+    storage: MeshStorage,
     /// The model transformation matrix. Converts local model space into world space.
     pub transform: Mat4
 }
 
 impl Model {
-    pub fn with_position(mesh: Rc<Box<Mesh>>, position: &Vec3) -> Model {
+    /// Create model from given mesh. The model will take ownership of the mesh.
+    pub fn from_mesh(mesh: Mesh) -> Model {
         Model {
-            mesh: mesh,
-            transform: Mat4::new_translation(position)
+            storage: MeshStorage::Owned{ meshes: vec![mesh] },
+            transform: Mat4::identity()
+        }
+    }
+
+    /// Create model from collection of models, taking ownership in the process.
+    pub fn from_meshes(meshes: impl IntoIterator<Item = Mesh>) -> Model {
+        Model {
+            storage: MeshStorage::Owned{ meshes: meshes.into_iter().collect() },
+            transform: Mat4::identity()
+        }
+    }
+
+    /// Create model from given mesh and model transformation. The model will take ownership of the mesh.
+    pub fn from_mesh_transformed(mesh: Mesh, trans: Mat4) -> Model {
+        Model {
+            storage: MeshStorage::Owned{ meshes: vec![mesh] },
+            transform: trans
+        }
+    }
+
+    /// Create model from collection of models, taking ownership in the process.
+    pub fn from_meshes_transformed(meshes: impl IntoIterator<Item = Mesh>, trans: Mat4) -> Model {
+        Model {
+            storage: MeshStorage::Owned{ meshes: meshes.into_iter().collect() },
+            transform: trans
+        }
+    }
+
+    /// Create model from reference counted mesh reference.
+    pub fn from_mesh_rc(mesh: Rc<Mesh>) -> Model {
+        Model {
+            storage: MeshStorage::RefCounted{ meshes: vec![mesh] },
+            transform: Mat4::identity()
+        }
+    }
+
+    /// Create model from collection of reference counted mesh references.
+    pub fn from_meshes_rc(meshes: &[Rc<Mesh>]) -> Model {
+        Model {
+            storage: MeshStorage::RefCounted{ meshes: meshes.to_vec() },
+            transform: Mat4::identity()
+        }
+    }
+
+    /// Create model from reference counted mesh reference and model transformation matrix.
+    pub fn from_mesh_transformed_rc(mesh: Rc<Mesh>, trans: Mat4) -> Model {
+        Model {
+            storage: MeshStorage::RefCounted{ meshes: vec![mesh] },
+            transform: trans
+        }
+    }
+
+    /// Create model from collection of reference counted mesh references.
+    pub fn from_meshes_transformed_rc(meshes: &[Rc<Mesh>], trans: Mat4) -> Model {
+        Model {
+            storage: MeshStorage::RefCounted{ meshes: meshes.to_vec() },
+            transform: trans
         }
     }
 }
@@ -71,11 +128,26 @@ pub struct MultiModel {
     pub models: Vec<Model>,
     /// The model matrix that will be applied to all sub models, in addition to their
     /// specific model matrices.
-    pub transforma: Mat4
+    pub transform: Mat4
 }
 
 impl MultiModel {
-	pub fn new( models.. mutable slice
+    /// Create multi model from given model collection, taking ownership of them in the process.
+    pub fn from_models(models: impl IntoIterator<Item = Model>) -> MultiModel {
+        MultiModel {
+            models: models.into_iter().collect(),
+            transform: Mat4::identity()
+        }
+    }
+
+    /// Create multi model from given model collection and model transformation matrix, taking
+    /// ownership of them in the process.
+    pub fn from_models_transformed(models: impl IntoIterator<Item = Model>, trans: Mat4) -> MultiModel {
+        MultiModel {
+            models: models.into_iter().collect(),
+            transform: trans
+        }
+    }
 }
 
 impl Render for MultiModel {

@@ -48,7 +48,7 @@ pub struct BezierEditorScene {
     /// Screen height
     height: u32,
     /// The sphere mesh used to visualize the control points. Its shared with all control point models.
-    sphere_mesh: Rc<Box<Mesh>>,
+    sphere_mesh: Rc<Mesh>,
     /// Where the mouse drag started
     drag_begin: Option<(u32, u32)>,
     /// Depth of the point we are dragging
@@ -83,7 +83,7 @@ impl BezierEditorScene {
             draw_control_curves: true,
             width: w,
             height: h,
-            sphere_mesh: Rc::new(Box::new(mesh)),
+            sphere_mesh: Rc::new(mesh),
             in_drag: false,
             drag_depth: None,
             drag_begin: None,
@@ -178,17 +178,15 @@ impl BezierEditorScene {
         
         for curve in &patch.curves {
             for i in 0..4 {
-                let point = curve.control_points[i].clone();
+                let point = &curve.control_points[i];
 
                 spheres.push(
-                    Model::with_position(self.sphere_mesh.clone(), &point)
+                    Model::from_mesh_transformed_rc(self.sphere_mesh.clone(), Mat4::new_translation(&point))  
                 );
             }
         }
 
-        MultiModel {
-            models: spheres
-        }
+        MultiModel::from_models(spheres)
     }
 
     fn create_control_curve_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
