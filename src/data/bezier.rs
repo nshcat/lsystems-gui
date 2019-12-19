@@ -41,7 +41,9 @@ impl BezierCurveParameters {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BezierPatchParameters {
     /// The four bezier curves that make up the patch
-    pub curves: [BezierCurveParameters; 4]
+    pub curves: [BezierCurveParameters; 4],
+    /// Color of this patch
+    pub color: Vec3
 }
 
 impl BezierPatchParameters {
@@ -52,7 +54,8 @@ impl BezierPatchParameters {
                 BezierCurveParameters::empty(),
                 BezierCurveParameters::empty(),
                 BezierCurveParameters::empty()
-            ]
+            ],
+            color: Vec3::new(1.0, 1.0, 1.0)
         }
     }
 

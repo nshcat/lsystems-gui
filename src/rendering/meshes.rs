@@ -662,8 +662,13 @@ impl PlaneGeometry {
         }
 
         plane.regenerate_normals();
-        
+
         plane
+    }
+
+    /// Overwrite plane vertex at given index.
+    pub fn set_vertex(&mut self, index: usize, vertex: Vec3) {
+        self.positions.local_buffer[index] = vertex;
     }
 
     /// Regenerate all vertex normals.
