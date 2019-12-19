@@ -313,45 +313,62 @@ impl Scene for BezierEditorScene {
                         let patch_id = ui.push_id(i as i32);
 
                         let mut label = ImString::with_capacity(128);
-                        label.push_str(&format!("Control Points for Model '{}'", i));
+                        label.push_str(&format!("Model '{}'", i));
 
                         if ui.collapsing_header(&label)
                             .default_open(false)
                             .build() {
                             ui.indent();
-                            
-                            for (j, curve) in patch.curves.iter_mut().enumerate() {
-                                let token = ui.push_id(j as i32);
 
-                                let mut label = ImString::with_capacity(48);
-                                label.push_str(&format!("Curve {}", j));
+                            let mut color: [f32; 3] = [patch.color.x, patch.color.y, patch.color.z];
 
-                                ui.text(&label);
+                            if ColorEdit::new(im_str!("Model Color"), &mut color).build(ui) {
+                                let new_color = Vec3::new(color[0], color[1], color[2]);
+                                patch.color = new_color;
+                                modified = Some(i);
+                            }
+
+                            if ui.collapsing_header(im_str!("Control Points"))
+                                .default_open(false)
+                                .build() {
 
                                 ui.indent();
-
-                                for k in 0..4 {
-                                    let point = &mut curve.control_points[k];
-
-                                    let mut data = [point.x, point.y, point.z];
+                            
+                                for (j, curve) in patch.curves.iter_mut().enumerate() {
+                                    let token = ui.push_id(j as i32);
 
                                     let mut label = ImString::with_capacity(48);
-                                    label.push_str(&format!("Point {}", k));
+                                    label.push_str(&format!("Curve {}", j));
 
-                                    if ui.drag_float3(&label, &mut data) 
-                                        .min(-500.0)
-                                        .max(500.0)
-                                        .display_format(im_str!("%.2lf"))
-                                        .speed(0.06)
-                                        .build() {
-                                            *point = Vec3::new(data[0], data[1], data[2]);
-                                            modified = Some(i);
+                                    ui.text(&label);
+
+                                    ui.indent();
+
+                                    for k in 0..4 {
+                                        let point = &mut curve.control_points[k];
+
+                                        let mut data = [point.x, point.y, point.z];
+
+                                        let mut label = ImString::with_capacity(48);
+                                        label.push_str(&format!("Point {}", k));
+
+                                        if ui.drag_float3(&label, &mut data) 
+                                            .min(-500.0)
+                                            .max(500.0)
+                                            .display_format(im_str!("%.2lf"))
+                                            .speed(0.06)
+                                            .build() {
+                                                *point = Vec3::new(data[0], data[1], data[2]);
+                                                modified = Some(i);
+                                        }
                                     }
+
+                                    ui.unindent();
+
+                                    token.pop(ui);
                                 }
 
                                 ui.unindent();
-
-                                token.pop(ui);
                             }
 
                             ui.unindent();
