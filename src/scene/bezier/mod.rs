@@ -9,6 +9,7 @@ extern crate nalgebra;
 use crate::scene::*;
 use crate::data::bezier::*;
 use crate::rendering::*;
+use crate::rendering::bezier::*;
 use crate::rendering::camera::*;
 use crate::rendering::meshes::*;
 use crate::rendering::materials::*;
@@ -140,14 +141,11 @@ impl BezierEditorScene {
     }
 
     fn create_normal_mesh(&self, patch: &BezierPatchParameters) -> Mesh {
-        let plane = PlaneGeometry::with_displacement(
-            30, 30, Vec3::new(0.8, 0.8, 0.8),
-            &|u, v| patch.evaluate(u, v)
-        );
+        let geometry = BezierGeometry::new(patch, 30, 30);
 
         let mat = Box::new(NormalTestMaterial::new(0.05, &Vec3::new(1.0, 1.0, 0.0)));
 
-        let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &plane);
+        let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &geometry);
         mesh
     }
 
