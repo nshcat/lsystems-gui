@@ -465,7 +465,7 @@ impl Scene for LSystemScene {
 
     /// Show imgui GUI if needed.
     fn do_gui(&mut self, ui: &Ui) -> SceneAction {
-        ui.show_demo_window(&mut true);
+        //ui.show_demo_window(&mut true);
         gui::do_main_menu_bar(ui, self);
         gui::do_lsystem_params_gui(ui, self)  
     }

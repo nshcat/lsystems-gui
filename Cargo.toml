@@ -19,5 +19,6 @@ serde_json          = "1.0"
 nfd                 = "0.0.4"
 ncollide3d          = "0.21.0"
 maplit              = "1.0.2"
+approx              = "0.3.2"
 lsystems-core 	    = { git = "https://github.com/nshcat/lsystems-core", branch = "master", features = [ "serde-serialize" ] }
 

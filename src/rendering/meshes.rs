@@ -33,6 +33,7 @@ use gl::types::*;
 use std::ptr::*;
 use std::collections::*;
 use std::borrow::*;
+use approx::*;
 use crate::rendering::RenderParameters;
 use crate::rendering::buffers::{VertexArray, Buffer, BufferBase};
 use crate::rendering::materials::*;
@@ -415,9 +416,13 @@ impl NormalGenerator {
         for (i, face) in faces.iter().enumerate() {
             let normal = face_normals[i];
 
-            normals[face.x as usize] += normal;
-            normals[face.y as usize] += normal;
-            normals[face.z as usize] += normal;
+            // Check that the norm of the calculated normal is at least approximately 1,
+            // since otherwise the triangle was degenerated.
+            if abs_diff_eq!(normal.norm(), 1.0) {
+                normals[face.x as usize] += normal;
+                normals[face.y as usize] += normal;
+                normals[face.z as usize] += normal;
+            }
         }
 
         // Finally, the normal vectors need to be normalized
@@ -447,10 +452,14 @@ impl NormalGenerator {
         for (i, face) in faces.iter().enumerate() {
             let normal = face_normals[i];
 
-            // TODO normally this would be +=, why is it not working with +=?
-            normals[face.x as usize] = normal;
-            normals[face.y as usize] = normal;
-            normals[face.z as usize] = normal;
+            // Check that the norm of the calculated normal is at least approximately 1,
+            // since otherwise the triangle was degenerated.
+            if abs_diff_eq!(normal.norm(), 1.0) {
+                // TODO normally this would be +=, why is it not working with +=?
+                normals[face.x as usize] = normal;
+                normals[face.y as usize] = normal;
+                normals[face.z as usize] = normal;
+            }
         }
 
         // Finally, the normal vectors need to be normalized
