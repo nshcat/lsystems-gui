@@ -254,7 +254,7 @@ fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction
         // We do not have to refresh anything here, since per default, the models have an
         // empty identifier. This means their mesh is not generated.
         system.lsystem_params.bezier_models.push(
-            BezierModelParameters::empty()
+            BezierModelParameters::default()
         );
     }
 

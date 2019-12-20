@@ -55,7 +55,27 @@ impl BezierPatchParameters {
                 BezierCurveParameters::empty(),
                 BezierCurveParameters::empty()
             ],
-            color: Vec3::new(1.0, 1.0, 1.0)
+            color: Vec3::new(0.7, 0.7, 0.7)
+        }
+    }
+
+    pub fn default() -> BezierPatchParameters {
+        BezierPatchParameters {
+            color: Vec3::new(0.7, 0.7, 0.7),
+            curves: [
+                BezierCurveParameters {
+                    control_points: [ Vec3::new(0.0, 0.0, 0.0), Vec3::new(0.25, 0.0, 0.0), Vec3::new(0.75, 0.0, 0.0),  Vec3::new(1.0, 0.0, 0.0) ]
+                },
+                BezierCurveParameters {
+                    control_points: [ Vec3::new(0.0, 0.25, 0.0), Vec3::new(0.25, 0.25, 0.0), Vec3::new(0.75, 0.25, 0.0),  Vec3::new(1.0, 0.25, 0.0) ]
+                },
+                BezierCurveParameters {
+                    control_points: [ Vec3::new(0.0, 0.75, 0.0), Vec3::new(0.25, 0.75, 0.0), Vec3::new(0.75, 0.75, 0.0),  Vec3::new(1.0, 0.75, 0.0) ]
+                },
+                BezierCurveParameters {
+                    control_points: [ Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.25, 1.0, 0.0), Vec3::new(0.75, 1.0, 0.0),  Vec3::new(1.0, 1.0, 0.0) ]
+                }
+            ]
         }
     }
 
@@ -92,6 +112,14 @@ impl BezierModelParameters {
         BezierModelParameters {
             symbol: None,
             patches: Vec::new()
+        }
+    }
+
+    /// Create a bezier patch that is just a flat plane in xy.
+    pub fn default() -> BezierModelParameters {
+        BezierModelParameters {
+            symbol: None,
+            patches: vec![BezierPatchParameters::default()]
         }
     }
 }
