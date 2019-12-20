@@ -142,6 +142,16 @@ impl BezierEditorScene {
         let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleStrip, mat, &geometry);
         mesh
     }
+    
+    /// Refresh the control point meshes only for the currently dragged point
+    fn refresh_control_meshes_for_dragged(&mut self) {
+        if let Some((i, j, k)) = self.dragged_point {
+            let patch = &self.working_copy.patches[i];
+
+            self.control_curve_meshes[i] = self.create_control_curve_mesh(patch);
+            self.control_point_models[i] = self.create_control_point_model(patch);
+        }
+    }
 
     fn refresh_control_meshes(&mut self) {
         self.control_point_models = Vec::new();
@@ -527,8 +537,10 @@ impl Scene for BezierEditorScene {
                         let p = &mut self.working_copy.patches[i].curves[j].control_points[k];
                         *p = new_point.clone();
             
-                        self.drag_begin = Some((curX, curY));            
-                        self.refresh_control_meshes();  
+                        self.drag_begin = Some((curX, curY));     
+                        
+                        // We only need to update the control meshes for the currently dragged point
+                        self.refresh_control_meshes_for_dragged();
                     } else {
                         self.in_drag = false;
                         self.refresh_meshes();
