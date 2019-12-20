@@ -50,7 +50,7 @@ enum MoveMode {
 #[derive(Clone)]
 pub struct Camera {
     /// Set of vectors describing the state of the camera
-    state: CameraState,
+    pub state: CameraState,
     /// Projection type to use
     proj_type: ProjectionType,
     /// Screen width
@@ -58,9 +58,9 @@ pub struct Camera {
     /// Screen height
     height: u32,
     /// Current projection matrix
-    projection: Mat4,
+    pub projection: Mat4,
     /// Current view matrix
-    view: Mat4,
+    pub view: Mat4,
     /// Current drag start position
     drag_start: IVec2,
     /// Whether the user is currently dragging the mouse
@@ -159,7 +159,7 @@ impl Camera {
                     fov.to_radians(),   // The field of view, in radians
                     self.width as _,    // Width of the screen
                     self.height as _,   // Height of the screen
-                    0.1,                // Near clip plane  
+                    0.0001,                // Near clip plane  
                     1000.0              // Far clip plane
                 );
             }

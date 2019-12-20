@@ -27,12 +27,15 @@
 use nalgebra_glm::{Vec3, Mat4, UVec3};
 use std::mem::*;
 use std::any::Any;
+use std::f32::*;
+use std::cmp::*;
 use gl::types::*;
 use std::ptr::*;
 use std::collections::*;
 use std::borrow::*;
+use approx::*;
 use crate::rendering::RenderParameters;
-use crate::rendering::buffers::{VertexArray, VertexBuffer, VertexBufferBase};
+use crate::rendering::buffers::{VertexArray, Buffer, BufferBase};
 use crate::rendering::materials::*;
 use crate::rendering::traits::*;
 
@@ -98,7 +101,7 @@ pub trait AttributeArrayBase {
     fn setup_attribute(&self, vao: &VertexArray);
 
     /// Create vertex buffer from this attribute array.
-    fn to_vertex_buffer(&self) -> Box<dyn VertexBufferBase>;
+    fn to_vertex_buffer(&self) -> Box<dyn BufferBase>;
 
     /// How many elements are currently stored in the local buffer.
     fn len(&self) -> usize;
@@ -145,8 +148,8 @@ impl<T: 'static> AttributeArrayBase for AttributeArray<T> where T: GPUType {
         vao.activate_attribute::<T>(&self.descriptor);
     }
 
-    fn to_vertex_buffer(&self) -> Box<dyn VertexBufferBase> {
-        Box::new(VertexBuffer::<T>::new(&self.local_buffer))
+    fn to_vertex_buffer(&self) -> Box<dyn BufferBase> {
+        Box::new(Buffer::<T>::new_vertex_buffer(&self.local_buffer))
     }
 
     /// How many elements are currently stored in the local buffer.
@@ -186,6 +189,11 @@ pub trait DynamicGeometry: Geometry {
     fn attr_by_label_mut<T: GPUType + 'static>(&mut self, label: &str) -> &mut AttributeArray<T>;
     /// Retrieve shared reference to the vertex attribute with given label.
     fn attr_by_label<T: GPUType + 'static>(&self, label: &str) -> & AttributeArray<T>;
+}
+
+/// Trait for geometries that are rendered via indexed drawing.
+pub trait IndexedGeometry: Geometry {
+    fn retrieve_indices(&self) -> &[u32];
 }
 
 /// A basic geometry that can dynamically be extended with additional attributes.
@@ -295,6 +303,40 @@ impl DynamicGeometry for ExtendableBasicGeometry {
 pub struct NormalGenerator;
 
 impl NormalGenerator {
+    /// Calculate all faces of indexed geometry.
+    fn calculate_indexed_faces(pt: PrimitiveType, indices: &[u32]) -> Vec<UVec3> {
+        let mut faces = Vec::new();
+
+        match pt {
+            // Triangle fans contain triangles that all share the same root vertex, which 
+            // always is the vertex with index 0.
+            PrimitiveType::TriangleFan => {
+                for i in 2..indices.len() {
+                    faces.push(UVec3::new(indices[0], indices[(i-1)], indices[i]));
+                }
+            },
+            // Unconnected triangle soup, which means that each vertex is only used exactly once.
+            PrimitiveType::Triangles => {
+                if indices.len() % 3 != 0 {
+                    panic!("Can't create faces for given vertex count: not multiple of 3");
+                }
+
+                for i in (0..indices.len()).step_by(3) {
+                    faces.push(UVec3::new(indices[i], indices[i+1], indices[i+2]));
+                }
+            },
+            // A strip uses a sliding window of width 3 to assign triangles to vertices.
+            PrimitiveType::TriangleStrip => {
+                for i in 2..indices.len() {
+                    faces.push(UVec3::new(indices[i-2], indices[i-1], indices[i]));
+                }
+            },
+            _ => panic!("Primitive type not supported by calculate_indexed_faces!")
+        };
+
+        faces
+    }
+
     /// Determine all faces of the geometry. This returns vectors containg three indices
     /// into the vertex slice.
     fn calculate_faces(pt: PrimitiveType, num_vertices: usize) -> Vec<UVec3> {
@@ -374,9 +416,50 @@ impl NormalGenerator {
         for (i, face) in faces.iter().enumerate() {
             let normal = face_normals[i];
 
-            normals[face.x as usize] += normal;
-            normals[face.y as usize] += normal;
-            normals[face.z as usize] += normal;
+            // Check that the norm of the calculated normal is at least approximately 1,
+            // since otherwise the triangle was degenerated.
+            if abs_diff_eq!(normal.norm(), 1.0) {
+                normals[face.x as usize] += normal;
+                normals[face.y as usize] += normal;
+                normals[face.z as usize] += normal;
+            }
+        }
+
+        // Finally, the normal vectors need to be normalized
+        for i in 0..normals.len() {
+            *normals[i] = *normals[i].normalize();
+        }
+
+        normals
+    }
+
+    /// Generate vertex normals for given indexed vertices interpreted as given primitive type
+    pub fn generate_indexed_normals(pt: PrimitiveType, positions: &[Vec3], indices: &[u32]) -> Vec<Vec3> {
+        // Create sequence of empty normal vectors
+        let mut normals = Vec::with_capacity(positions.len());
+
+        for _ in 0..positions.len() {
+            normals.push(Vec3::zeros());
+        }
+
+        // Determine faces
+        let faces = Self::calculate_indexed_faces(pt, indices);
+
+        // Calculate face normals
+        let face_normals = Self::generate_face_normals(positions, &faces);
+
+        // For each face, add the normal vector to each of its participating vertices
+        for (i, face) in faces.iter().enumerate() {
+            let normal = face_normals[i];
+
+            // Check that the norm of the calculated normal is at least approximately 1,
+            // since otherwise the triangle was degenerated.
+            if abs_diff_eq!(normal.norm(), 1.0) {
+                // TODO normally this would be +=, why is it not working with +=?
+                normals[face.x as usize] = normal;
+                normals[face.y as usize] = normal;
+                normals[face.z as usize] = normal;
+            }
         }
 
         // Finally, the normal vectors need to be normalized
@@ -393,11 +476,11 @@ impl NormalGenerator {
 #[derive(Clone)]
 pub struct BasicGeometry {
     /// Position value for each vertex
-    positions: AttributeArray<Vec3>,
+    pub positions: AttributeArray<Vec3>,
     /// Color value for each vertex
-    colors: AttributeArray<Vec3>,
+    pub colors: AttributeArray<Vec3>,
     /// Normal vector for each vertex
-    normals: AttributeArray<Vec3>
+    pub normals: AttributeArray<Vec3>
 }
 
 impl BasicGeometry {
@@ -453,6 +536,218 @@ impl Geometry for BasicGeometry {
     }
 }
 
+/// A geometry that generates a sphere. Uses GL_TRIANGLES
+pub struct SphereGeometry {
+    positions: AttributeArray<Vec3>,
+    colors: AttributeArray<Vec3>,
+    normals: AttributeArray<Vec3>,
+    indices: Vec<u32>
+}
+
+impl Geometry for SphereGeometry {
+    fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
+        vec![&self.positions, &self.colors, &self.normals]
+    }
+}
+
+impl IndexedGeometry for SphereGeometry {
+    fn retrieve_indices(&self) -> &[u32] {
+        &self.indices
+    }
+}
+
+impl SphereGeometry {
+    pub fn new(radius: f32, slices: u32, tiles: u32, color: Vec3) -> SphereGeometry {
+        let mut geom = SphereGeometry {
+            positions: AttributeArray::new(0, "position"),
+            colors: AttributeArray::new(1, "color"),
+            normals: AttributeArray::new(2, "normal"),
+            indices: Vec::new()
+        };
+
+        let dfi = consts::PI / (tiles as f32);
+        let dth = (2.0 * consts::PI) / (slices as f32);
+
+        let mut cs_fi = Vec::new();
+        let mut cs_th = Vec::new();
+        let mut sn_fi = Vec::new();
+        let mut sn_th = Vec::new();
+
+        let mut fi: f32 = 0.0;
+        let mut th: f32 = 0.0;
+
+        for _ in 0..= max(tiles, slices) {
+            cs_fi.push(fi.cos());
+            cs_th.push(th.cos());
+
+            sn_fi.push(fi.sin());
+            sn_th.push(th.sin());
+
+            fi = fi + dfi;
+            th = th + dth;
+        }
+
+
+        for i in 0..=tiles {
+            for j in 0..=slices {
+                let k = j % slices;
+
+                let normal = Vec3::new(
+                    sn_fi[i as usize] * cs_th[k as usize],
+                    sn_fi[i as usize] * sn_th[k as usize],
+                    cs_fi[i as usize]
+                );
+
+                let position = normal * radius;
+
+                geom.colors.local_buffer.push(color.clone());
+                geom.positions.local_buffer.push(position);
+                geom.normals.local_buffer.push(normal);
+            }
+        }
+
+        let mut offset: u32 = 0;
+
+        for j in 0..tiles {
+            for i in 1..slices {
+                let idx = i + offset;
+
+                geom.indices.push(idx - 1);
+                geom.indices.push(idx + slices - 1);
+                geom.indices.push(idx);
+
+
+                geom.indices.push(idx);
+                geom.indices.push(idx + slices - 1);
+                geom.indices.push(idx + slices);
+            }
+            offset = offset + slices;
+        }
+
+        geom
+    }
+}
+
+/// A geometry that generates a tesselated plane, that goes from 0 to 1 in each dimensions
+/// and is in XZ plane
+pub struct PlaneGeometry {
+    positions: AttributeArray<Vec3>,
+    colors: AttributeArray<Vec3>,
+    normals: AttributeArray<Vec3>,
+    indices: Vec<u32>
+}
+
+impl Geometry for PlaneGeometry {
+    fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
+        vec![&self.positions, &self.colors, &self.normals]
+    }
+}
+
+impl IndexedGeometry for PlaneGeometry {
+    fn retrieve_indices(&self) -> &[u32] {
+        &self.indices
+    }
+}
+
+impl PlaneGeometry {
+    /// Create a new plane and displace vertices using given closure
+    pub fn with_displacement(rows: u32, cols: u32, color: Vec3, f: &dyn Fn(f32, f32) -> Vec3) -> PlaneGeometry {
+        let mut plane = Self::new(rows, cols, color);
+
+        {
+            let vertices = &mut plane.positions.local_buffer;
+
+            for y in 0..=rows {
+                let base = y * (cols+1);
+
+                for x in 0..=cols {
+                    let u = (x as f32) / (cols) as f32;
+                    let v = (y as f32) / (rows) as f32;
+
+                    let newVertex = f(u, v);
+                    vertices[(base + x) as usize] = newVertex;
+                }
+            }
+        }
+
+        plane.regenerate_normals();
+
+        plane
+    }
+
+    /// Overwrite plane vertex at given index.
+    pub fn set_vertex(&mut self, index: usize, vertex: Vec3) {
+        self.positions.local_buffer[index] = vertex;
+    }
+
+    /// Regenerate all vertex normals.
+    pub fn regenerate_normals(&mut self) {
+        self.normals.local_buffer = NormalGenerator::generate_indexed_normals(
+            PrimitiveType::TriangleStrip,
+            &self.positions.local_buffer,
+            &self.indices
+        );
+    }
+
+    /// Create a new plane geometry
+    pub fn new(rows: u32, cols: u32, color: Vec3) -> PlaneGeometry {
+        let total_vertices = (rows + 1) * (cols + 1);
+        let num_indices_per_row = (cols * 2) + 2;
+        let num_index_degens_req = (rows - 1) * 2;
+        let total_indices = num_indices_per_row * rows + num_index_degens_req;
+
+        let mut vertices: Vec<Vec3> = vec![Vec3::zeros(); total_vertices as _];
+        let mut indices: Vec<u32> = Vec::with_capacity(total_indices as _);
+
+        let rows = rows + 1;
+        let cols = cols + 1;
+
+        // Create vertices
+        for y in 0..rows {
+            let base = y * cols;
+
+            for x in 0..cols {
+                let index = (base + x) as usize;
+                vertices[index] = Vec3::new(
+                    (x as f32) / ((cols-1) as f32),
+                    (y as f32) / ((rows-1)  as f32),
+                    0.0
+                );
+            }
+        }
+
+        // Create indices
+        let rows = rows - 1;
+
+        for y in 0..rows {
+            let base = y * cols;
+
+            for x in 0..cols {
+                indices.push(base + x);
+                indices.push(base + cols + x);
+            }
+
+            if y < (rows - 1) {
+                indices.push((y + 1) * cols + (cols - 1));
+                indices.push((y + 1) * cols);
+            }
+        }
+
+        let mut geometry = PlaneGeometry {
+            positions: AttributeArray::new(0, "position"),
+            colors: AttributeArray::new(1, "color"),
+            normals: AttributeArray::new(2, "normal"),
+            indices: indices
+        };
+
+        geometry.colors.local_buffer = vec![color; vertices.len()];
+        geometry.normals.local_buffer = vec![Vec3::new(0.0, 1.0, 0.0); vertices.len()];
+        geometry.positions.local_buffer = vertices;
+
+        geometry
+    } 
+}
+
 /// Enumeration describing the various primtive types that can be used to interpret and draw
 /// the vertex data contained within a mesh instance.
 #[derive(Debug, Clone, Copy)]
@@ -463,7 +758,8 @@ pub enum PrimitiveType {
     TriangleFan = gl::TRIANGLE_FAN,
     Lines = gl::LINES,
     LineStrip = gl::LINE_STRIP,
-    LineLoop = gl::LINE_LOOP
+    LineLoop = gl::LINE_LOOP,
+    Points = gl::POINTS
 }
 
 /// A mesh is a combination of geometry and a material, which can not be changed.
@@ -473,7 +769,7 @@ pub struct Mesh {
     primitive_type: PrimitiveType,
     /// Vertex buffer objects storing the vertex attribute data. There is a buffer
     /// for each attribute in the geometry.
-    buffers: Vec<Box<dyn VertexBufferBase>>,
+    buffers: Vec<Box<dyn BufferBase>>,
     /// Vertex array object defining vertex attributes
     vao: VertexArray,
     /// Associated material trait object
@@ -481,7 +777,13 @@ pub struct Mesh {
     /// Number of vertices supplied
     num_vertices: usize,
     /// Whether to draw this mesh as a wireframe
-    pub draw_wireframe: bool
+    pub draw_wireframe: bool,
+    /// Index buffer, which is only present if the geometry was indexed.
+    index_buffer: Option<Box<dyn BufferBase>>,
+    /// Size of rendered points. Only used if primitive type is "Points".
+    pub point_size: f32,
+    /// Width of lines. Only used if primitve type is any of the line types.
+    pub line_width: f32
 }
 
 impl Mesh {
@@ -495,7 +797,10 @@ impl Mesh {
             vao: VertexArray::new(),
             buffers: Vec::new(),
             draw_wireframe: false,
-            num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent")
+            num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent"),
+            index_buffer: None,
+            point_size: 1.0,
+            line_width: 1.0
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -510,6 +815,42 @@ impl Mesh {
         }
 
         mesh
+    }
+
+    /// Create a new mesh with given primitive type from given indexed geometry
+    pub fn new_indexed(pt: PrimitiveType, mat: Box<dyn Material>, geometry: &dyn IndexedGeometry) -> Mesh {
+        let attributes = geometry.retrieve_attributes();
+        let indices = geometry.retrieve_indices();
+        
+        let mut mesh = Mesh {
+            primitive_type: pt,
+            material: mat,
+            vao: VertexArray::new(),
+            buffers: Vec::new(),
+            draw_wireframe: false,
+            num_vertices: indices.len(),
+            index_buffer: None,
+            point_size: 1.0,
+            line_width: 1.0
+        };
+
+        // Create buffers and register attributes with vao for each attribute in the geometry
+        for attribute in &attributes {
+            let buffer = attribute.to_vertex_buffer();
+
+            buffer.enable();
+            attribute.setup_attribute(&mesh.vao);
+            buffer.disable();
+
+            mesh.buffers.push(buffer);
+        }
+
+        // Create index buffer
+        let index_buffer = Box::new(Buffer::new_index_buffer(indices));
+        mesh.index_buffer = Some(index_buffer);
+
+        mesh
+
     }
 
     /// Retrieve downcasted material reference
@@ -569,9 +910,42 @@ impl Render for Mesh {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
             }
 
-            
+            // Set special state based on primitive type
+            match self.primitive_type {
+                PrimitiveType::Points => {
+                    gl::PointSize(self.point_size as _);
+                },
+                PrimitiveType::LineLoop | PrimitiveType::Lines | PrimitiveType::LineStrip => {
+                    gl::LineWidth(self.line_width as _);
+                },
+                _ => {}
+            }
+
+            if let Some(idxbuf) = &self.index_buffer {
+                idxbuf.enable();
+
+                gl::DrawElements(
+                    self.primitive_type as _,
+                    self.num_vertices as _,
+                    gl::UNSIGNED_INT,
+                    0 as _
+                );
+
+                idxbuf.disable();
+            } else {
                 gl::DrawArrays(self.primitive_type as _, 0, self.num_vertices as _);
-            
+            } 
+
+            // Reset special state based on primitive type
+            match self.primitive_type {
+                PrimitiveType::Points => {
+                    gl::PointSize(1.0);
+                },
+                PrimitiveType::LineLoop | PrimitiveType::Lines | PrimitiveType::LineStrip => {
+                    gl::LineWidth(1.0);
+                },
+                _ => {}
+            }
 
             if self.draw_wireframe {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);

@@ -16,10 +16,11 @@ use rendering::{Viewport};
 mod rendering;
 mod data;
 mod scene;
-mod gui;
+mod gui_utils;
 
 use crate::data::*;
 use crate::scene::*;
+use crate::scene::lsystem::*;
 
 fn main() {
 	let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -50,16 +51,9 @@ fn main() {
     glfw.set_swap_interval(SwapInterval::Sync(1));
 
     let mut viewport;
-    let mut camera;
     {
         let (w, h) = window.get_size();
-
         viewport = Viewport::for_window(w as _, h as _);
-
-        camera = Rc::new(RefCell::new(Camera::new(
-            w as _, h as _,
-            ProjectionType::Perspective(75.0)
-        )));
     }
 
     let mut imgui = ImContext::create();
@@ -69,7 +63,23 @@ fn main() {
     let mut show_menu = true;
 
     // ======== Scene setup =================
-    let mut scene = LSystemScene::new(&LSystemParameters::from_string(data::presets::PENROSE), &ApplicationSettings::default_settings(), camera.clone());
+    let mut scene_manager = SceneManager::new();
+
+    // Create initial scene
+    {
+        let (w, h) = window.get_size();
+
+        scene_manager.push_scene(
+            make_rc_cell(
+                LSystemScene::new(
+                    &LSystemParameters::from_string(data::presets::PENROSE),
+                    &ApplicationSettings::default_settings(),
+                    w as _,
+                    h as _
+                )
+            )
+        );
+    }
     // ======================================
 
     viewport.enable();
@@ -78,45 +88,58 @@ fn main() {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         }
+        
+        // The scene manager action emitted by the folling scene render.
+        let action;
+        {
+            // Borrow mutable reference to the current scene for this frame
+            let mut scene = scene_manager.current_scene().borrow_mut();
 
-        let mut params = camera.borrow().to_render_parameters();
+            // Perform logic
+            scene.do_logic();
 
-        scene.render(&mut params);
+            // Render scene to screen
+            scene.render();
 
-        let ui = imgui_glfw.frame(&mut window, &mut imgui);
+            // Render the gui
+            {
+                let ui = imgui_glfw.frame(&mut window, &mut imgui);
+                action = scene.do_gui(&ui);
+                imgui_glfw.draw(ui, &mut window);
+            }      
+            
+            // Present newly rendered frame to screen
+            window.swap_buffers();
 
-        // DRAW GUI ===
-        //ui.show_demo_window(&mut true);
-        //gui::do_debug_gui(&ui);
-        gui::do_lsystem_params_gui(&ui, &mut scene);
-        gui::do_main_menu_bar(&ui, &mut scene);
-        // ============
+            // Handle input events
+            glfw.poll_events();
+            for (_, event) in glfw::flush_messages(&events) {
+                imgui_glfw.handle_event(&mut imgui, &event);
 
-        imgui_glfw.draw(ui, &mut window);
+                // Only pass events to scene if imgui does not capture them
+                if !imgui.io().want_capture_mouse && !imgui.io().want_capture_keyboard {
+                    scene.handle_event(&window, &event);
+                }
 
-        window.swap_buffers();
+                match event {
+                    glfw::WindowEvent::Key(glfw::Key::M, _, Action::Press, _) => {
+                        show_menu = !show_menu;
+                    },
+                    glfw::WindowEvent::Size(w, h) => {
+                        viewport.update(w as _, h as _);
+                        viewport.enable();
 
-        glfw.poll_events();
-        for (_, event) in glfw::flush_messages(&events) {
-            imgui_glfw.handle_event(&mut imgui, &event);
-
-            // Only pass events to camera is imgui does not capture them
-            if !imgui.io().want_capture_mouse && !imgui.io().want_capture_keyboard {
-                camera.borrow_mut().handle_event(&window, &event);
+                        // Notify the scene that the screen size has changed. This is important
+                        // to update internal state, such as cameras.
+                        scene.handle_resize(w as _, h as _);
+                    },
+                    _ => {},
+                }
             }
 
-            match event {
-                glfw::WindowEvent::Key(glfw::Key::M, _, Action::Press, _) => {
-                    show_menu = !show_menu;
-                },
-                glfw::WindowEvent::Size(w, h) => {
-                    viewport.update(w as _, h as _);
-                    viewport.enable();
-
-                    camera.borrow_mut().update(w as _, h as _);
-                },
-                _ => {},
-            }
         }
+
+        // Process action
+        scene_manager.process_action(action);
     }
 }

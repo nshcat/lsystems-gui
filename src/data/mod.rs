@@ -6,9 +6,14 @@ use std::string::*;
 use std::collections::*;
 use nalgebra_glm::Vec3;
 use lsystems_core::*;
-use lsystems_core::drawing::{DrawingParameters, DrawOperation};
+use lsystems_core::drawing::{DrawingParameters, TurtleCommand};
+use crate::data::bezier::*;
+
 
 pub mod presets;
+pub mod bezier;
+
+
 
 /// A special structure used to represent a single interpretation mapping.
 /// This is only used with the GUI, and the Option allows the user to have interpretations
@@ -16,7 +21,7 @@ pub mod presets;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Interpretation {
 	pub symbol: Option<char>,
-	pub operation: DrawOperation
+	pub operation: TurtleCommand
 }
 
 /// Struct containing application-wide settings
@@ -77,7 +82,8 @@ pub struct LSystemParameters {
 	/// order of interpretations and thus obtain some degree of consistency when it comes to
 	/// gui rendering.
 	pub interpretations: Vec<Interpretation>,
-	pub color_palette: Vec<Vec3>
+	pub color_palette: Vec<Vec3>,
+	pub bezier_models: Vec<BezierModelParameters>
 }
 
 impl LSystemParameters {
@@ -86,6 +92,8 @@ impl LSystemParameters {
 		serde_json::from_str(input).expect("Failed to read LSystemParameters from JSON")
 	}
 }
+
+
 
 
 

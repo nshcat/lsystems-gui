@@ -1,21 +1,17 @@
 use imgui::{MenuItem, EditableColor, ColorEdit, ImStr, StyleColor, ImString, ImColor, Slider, Condition, Context as ImContext, Window as ImWindow, im_str, Ui};
 use nalgebra_glm::Vec3;
+use crate::scene::lsystem::*;
 use crate::scene::*;
+use crate::scene::bezier::*;
 use crate::data;
+use crate::data::bezier::*;
 use crate::data::*;
+use crate::gui_utils::*;
 use lsystems_core::drawing::types::*;
-use lsystems_core::drawing::DrawOperation;
+use lsystems_core::drawing::TurtleCommand;
 use nfd::*;
 use std::fs::*;
 
-/// Show a help marker that shows a tooltip with given message on hover-over.
-/// Taken from the imgui demo window source code.
-fn help_marker(ui: &Ui, text: &ImStr) {
-    ui.text_disabled(im_str!("(?)"));
-    if ui.is_item_hovered() {
-        ui.tooltip_text(text);
-    }
-}
 
 fn do_color_palette_entry(ui: &Ui, value: &mut Vec3, idx: usize) -> bool {
     let outer_id = ui.push_id(idx as i32);
@@ -33,7 +29,9 @@ fn do_color_palette_entry(ui: &Ui, value: &mut Vec3, idx: usize) -> bool {
     return changed;
 }
 
-pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
+pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) -> SceneAction {
+    let mut action = SceneAction::Nothing;
+
     ImWindow::new(&ImString::new(&lsystem.lsystem_params.name))
             .size([450.0, 550.0], Condition::FirstUseEver)
             .position([0.0, 60.0], Condition::FirstUseEver)
@@ -70,6 +68,14 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
                     ui.unindent();
                 }
 
+                if ui.collapsing_header(im_str!("Bezier Patch Models"))
+                    .default_open(false)
+                    .build() {
+                    ui.indent();
+                    do_bezier_models(ui, lsystem, &mut action);
+                    ui.unindent();
+                }
+
                 if ui.collapsing_header(im_str!("Application Settings"))
                     .default_open(true)
                     .build() {
@@ -86,6 +92,8 @@ pub fn do_lsystem_params_gui(ui: &Ui, lsystem: &mut LSystemScene) {
                     ui.unindent();
                 }
             });
+
+    action
 }
 
 fn draw_operations() -> Vec<&'static ImStr> {
@@ -113,28 +121,162 @@ fn draw_operations() -> Vec<&'static ImStr> {
     ]
 }
 
-fn index_to_operation(index: usize) -> DrawOperation {
+fn do_bezier_models(ui: &Ui, system: &mut LSystemScene, action: &mut SceneAction) {
+
+    //let mut to_rename: Option<(usize, char, char)> = None;
+    let mut to_delete: Option<usize> = None;
+    let mut to_edit: Option<usize> = None;
+
+    // We need to push an outer ID here since we are using buttons with the same identifiers as the ones
+    // used to remove and add rules.
+    let outer_id = ui.push_id(4);
+
+    for (i, model) in system.lsystem_params.bezier_models.iter_mut().enumerate() {
+        let id = ui.push_id(i as i32);
+
+        let mut symbol_str = ImString::with_capacity(16);
+
+        if let Some(symbol) = model.symbol {
+            symbol_str.push_str(&symbol.to_string());
+        }
+
+        let token = ui.push_item_width(20.0);
+
+        // Save the old symbol for later renaming
+        let old_symbol = model.symbol;
+
+        if ui.input_text(im_str!("##sym"), &mut symbol_str).build() {
+            let trimmed = symbol_str.to_str().trim();
+            if trimmed.is_empty() {
+                model.symbol = None;
+            } else {
+                model.symbol = Some(trimmed.chars().next().unwrap());
+            }
+
+            if let Some(old_symbol) = old_symbol {
+                // Case 1: Simple rename
+                if let Some(new_symbol) = model.symbol {
+                    system.bezier_manager.rename_meshes(old_symbol, new_symbol);
+                } else if let None = model.symbol {
+                    // Case 2: Removed symbol
+                    system.bezier_manager.remove_meshes(old_symbol);
+                }
+            } else {
+                // Case 3: Has gotten a name when it didnt have one before
+                if let Some(new_symbol) = model.symbol {
+                    system.bezier_manager.update_meshes(model);
+                }
+            }
+        }
+
+        token.pop(ui);
+
+        ui.same_line(0.0);
+
+        if ui.button(im_str!("edit"), [0.0, 0.0]) {
+            to_edit = Some(i);
+        }
+
+        let colors = ui.push_style_colors(&[
+            (StyleColor::Button, [0.6, 0.239, 0.239, 1.0]),
+            (StyleColor::ButtonHovered, [0.7, 0.2117, 0.2117, 1.0]),
+            (StyleColor::ButtonActive, [0.8, 0.1607, 0.1607, 1.0])
+        ]);
+
+        ui.same_line(0.0);
+
+        if ui.button(im_str!("-"), [0.0, 0.0]) {
+            to_delete = Some(i);
+        }
+        
+        colors.pop(ui);
+        /*  */
+
+        id.pop(ui);
+    }
+
+    match to_edit {
+        Some(i) => {
+            *action = SceneAction::PushScene(
+                make_rc_cell(
+                    BezierEditorScene::new(system.edit_bezier_model(i), system.width, system.height)
+                )
+            );
+        },
+        _ => {}
+    }
+
+    match to_delete {
+        Some(i) => {
+            // Remove mesh from manager, if the symbol was not empty.
+            let id = system.lsystem_params.bezier_models[i].symbol;
+
+            // Remove model parameters from lsystem parameters.
+            system.lsystem_params.bezier_models.remove(i);
+
+            if let Some(id) = id {
+                system.bezier_manager.remove_meshes(id);
+
+                // Search if there is another bezier model with the same identifier. 
+                // This improves UX by automatically loading the meshes for it. Otherwise the user
+                // would need to refresh the identifier for the other model.
+                for model in &system.lsystem_params.bezier_models {
+                    if let Some(other_id) = model.symbol {
+                        if other_id == id {
+                            system.bezier_manager.update_meshes(model);
+                            break;
+                        }
+                    }
+                }
+
+                // Refresh view
+                system.refresh_bezier_models();
+            }
+        }
+        _ => {}
+    };
+
+
+    let colors = ui.push_style_colors(&[
+        (StyleColor::Button, [0.349, 0.6, 0.239, 1.0]),
+        (StyleColor::ButtonHovered, [0.3568, 0.7019, 0.2117, 1.0]),
+        (StyleColor::ButtonActive, [0.3529, 0.8, 0.1607, 1.0])
+    ]);
+
+    if ui.button(im_str!("+"), [0.0, 0.0]) {
+        // We do not have to refresh anything here, since per default, the models have an
+        // empty identifier. This means their mesh is not generated.
+        system.lsystem_params.bezier_models.push(
+            BezierModelParameters::default()
+        );
+    }
+
+    colors.pop(ui);
+    outer_id.pop(ui);
+}
+
+fn index_to_operation(index: usize) -> TurtleCommand {
     match index {
-        0 => DrawOperation::Forward,
-        1 => DrawOperation::ForwardNoDraw,
-        2 => DrawOperation::TurnRight,
-        3 => DrawOperation::TurnLeft,
-        4 => DrawOperation::SaveState,
-        5 => DrawOperation::LoadState,
-        6 => DrawOperation::Ignore,
-        7 => DrawOperation::ForwardContracting,
-        8 => DrawOperation::PitchDown,
-        9 => DrawOperation::PitchUp,
-        10 => DrawOperation::RollLeft,
-        11 => DrawOperation::RollRight,
-        12 => DrawOperation::TurnAround,
-        13 => DrawOperation::BeginPolygon,
-        14 => DrawOperation::EndPolygon,
-        15 => DrawOperation::SubmitVertex,
-        16 => DrawOperation::IncrementColor,
-        17 => DrawOperation::DecrementColor,
-        18 => DrawOperation::IncrementLineWidth,
-        19 => DrawOperation::DecrementLineWidth,
+        0 => TurtleCommand::Forward,
+        1 => TurtleCommand::ForwardNoDraw,
+        2 => TurtleCommand::TurnRight,
+        3 => TurtleCommand::TurnLeft,
+        4 => TurtleCommand::SaveState,
+        5 => TurtleCommand::LoadState,
+        6 => TurtleCommand::Ignore,
+        7 => TurtleCommand::ForwardContracting,
+        8 => TurtleCommand::PitchDown,
+        9 => TurtleCommand::PitchUp,
+        10 => TurtleCommand::RollLeft,
+        11 => TurtleCommand::RollRight,
+        12 => TurtleCommand::TurnAround,
+        13 => TurtleCommand::BeginPolygon,
+        14 => TurtleCommand::EndPolygon,
+        15 => TurtleCommand::SubmitVertex,
+        16 => TurtleCommand::IncrementColor,
+        17 => TurtleCommand::DecrementColor,
+        18 => TurtleCommand::IncrementLineWidth,
+        19 => TurtleCommand::DecrementLineWidth,
         _ => panic!("Unknown draw operation value")
     }
 }
@@ -337,7 +479,7 @@ fn do_interpretations(ui: &Ui, lsystem: &mut LSystemScene) {
         params.interpretations.push(
             Interpretation{
                 symbol: None,
-                operation: DrawOperation::Forward
+                operation: TurtleCommand::Forward
             }
         );
 
