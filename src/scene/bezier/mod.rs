@@ -18,6 +18,7 @@ use crate::rendering::model::*;
 use crate::rendering::lighting::*;
 use crate::scene::lsystem::normal_test_material::*;
 use crate::scene::bezier::gizmos::*;
+use crate::gui_utils::*;
 extern crate glfw;
 
 mod gizmos;
@@ -59,7 +60,11 @@ pub struct BezierEditorScene {
     /// The scenes lights
     lights: LightingContext,
     /// The gizmo visualizing the cardinal axises
-    axis_gizmo: OriginGizmo
+    axis_gizmo: OriginGizmo,
+    /// Flags describing whether the subpatches are shown in the viewport or not
+    active: Vec<bool>,
+    /// GUI helper that remembers for which model the popup is currently shown.
+    gui_delete_popup_id: Option<usize>
 }
 
 impl BezierEditorScene {
@@ -71,6 +76,7 @@ impl BezierEditorScene {
         mesh.draw_wireframe = false;
 
         let working_copy = model.borrow().clone();
+        let active = vec![true; working_copy.patches.len()];
         let mut scene = BezierEditorScene {
             working_copy: working_copy,
             model: model,
@@ -89,7 +95,9 @@ impl BezierEditorScene {
             dragged_point: None,
             lights: LightingContext::new_default(),
             draw_normal_vectors: false,
-            axis_gizmo: OriginGizmo::new(0.3, 3.5)
+            axis_gizmo: OriginGizmo::new(0.3, 3.5),
+            active: active,
+            gui_delete_popup_id: None
         };
 
         scene.refresh_meshes();
@@ -253,6 +261,12 @@ impl BezierEditorScene {
         // We check if a sphere around the clicked point intersects which spheres around any of the
         // control points, in order to retrieve which of the control points is the clicked one.
         for (i, patch) in self.working_copy.patches.iter().enumerate() {
+            // If the patch is not currently set to be active, skip it. Otherwise, the user could
+            // modify invisible control points, which is not good.
+            if !self.active[i] {
+                continue;
+            }
+
             for (j, curve) in patch.curves.iter().enumerate() {
                 for k in 0..4 {
                     let point = &curve.control_points[k];
@@ -287,22 +301,24 @@ impl Scene for BezierEditorScene {
 
         self.axis_gizmo.render(&mut rp);
 
-        for mesh in &self.meshes {
-            mesh.render(&mut rp);
-        }
-
-        if self.draw_control_curves {
-            for mesh in &self.control_curve_meshes {
-                mesh.render(&mut rp);
+        // The use of a range based for loop here might seem odd, but we
+        // need to be able to check for each patch if its currently activated.
+        for i in 0..self.working_copy.patches.len() {
+            // Skip this patch and all its associated meshes and models if its not activated.
+            if !self.active[i] {
+                continue;
             }
-        }
 
-        for model in &self.control_point_models {
-            model.render(&mut rp);
-        }
+            self.meshes[i].render(&mut rp);
+            self.control_point_models[i].render(&mut rp);
 
-        for mesh in &self.normal_vector_vis {
-            mesh.render(&mut rp);
+            if self.draw_control_curves {
+                self.control_curve_meshes[i].render(&mut rp);
+            }
+            
+            if self.draw_normal_vectors {
+                self.normal_vector_vis[i].render(&mut rp);
+            }
         }
     }
 
@@ -325,6 +341,8 @@ impl Scene for BezierEditorScene {
 
                     let mut modified: Option<usize> = None;
                     let mut refresh_all = false;
+                    let mut to_remove: Option<usize> = None;
+                    let mut show_delete_popup: Option<usize> = None;
  
                     for (i, patch) in self.working_copy.patches.iter_mut().enumerate() {
                         let patch_id = ui.push_id(i as i32);
@@ -336,6 +354,28 @@ impl Scene for BezierEditorScene {
                             .default_open(false)
                             .build() {
                             ui.indent();
+
+                            ui.checkbox(im_str!("Active"), &mut self.active[i]);
+                            ui.same_line(0.0);
+                            help_marker(ui, im_str!("Inactive models and their control points and curves are not rendered in the editor viewport."));
+
+                            
+                            let colors = ui.push_style_colors(&[
+                                (StyleColor::Button, [0.6, 0.239, 0.239, 1.0]),
+                                (StyleColor::ButtonHovered, [0.7, 0.2117, 0.2117, 1.0]),
+                                (StyleColor::ButtonActive, [0.8, 0.1607, 0.1607, 1.0])
+                            ]);
+            
+                            ui.same_line(412.0);
+
+                    
+                            if ui.button(im_str!("Remove"), [0.0, 0.0]) {
+                                show_delete_popup = Some(i);      
+                            }
+                    
+                            colors.pop(ui);
+
+
 
                             let mut color: [f32; 3] = [patch.color.x, patch.color.y, patch.color.z];
 
@@ -401,13 +441,36 @@ impl Scene for BezierEditorScene {
                     ]);
                 
                     if ui.button(im_str!("+"), [0.0, 0.0]) {
-                        self.working_copy.patches.push(BezierPatchParameters::empty());
+                        self.working_copy.patches.push(BezierPatchParameters::default());
+                        self.active.push(true);
                         refresh_all = true;
                     }
                 
                     colors.pop(ui);
 
                     ui.unindent();
+
+                    if let Some(i) = show_delete_popup {
+                        self.gui_delete_popup_id = Some(i);
+                        ui.open_popup(im_str!("Delete model?"));
+                        show_delete_popup = None;
+                    }
+                       
+                    if let Some(button) = show_popup(ui, im_str!("Delete model?"), im_str!("Do you really want to delete the selected model?"), &vec![PopupButton::Yes, PopupButton::No]) {
+                        match button {
+                            PopupButton::Yes => {
+                                // Handle deletion
+                                let index = self.gui_delete_popup_id.unwrap();
+
+                                self.active.remove(index);
+                                self.working_copy.patches.remove(index);
+
+                                refresh_all = true;
+                            },
+                            _ => {}
+                        }
+                    }
+                   
 
                     if refresh_all {
                         self.refresh_meshes();

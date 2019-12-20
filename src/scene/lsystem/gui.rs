@@ -6,19 +6,12 @@ use crate::scene::bezier::*;
 use crate::data;
 use crate::data::bezier::*;
 use crate::data::*;
+use crate::gui_utils::*;
 use lsystems_core::drawing::types::*;
 use lsystems_core::drawing::TurtleCommand;
 use nfd::*;
 use std::fs::*;
 
-/// Show a help marker that shows a tooltip with given message on hover-over.
-/// Taken from the imgui demo window source code.
-fn help_marker(ui: &Ui, text: &ImStr) {
-    ui.text_disabled(im_str!("(?)"));
-    if ui.is_item_hovered() {
-        ui.tooltip_text(text);
-    }
-}
 
 fn do_color_palette_entry(ui: &Ui, value: &mut Vec3, idx: usize) -> bool {
     let outer_id = ui.push_id(idx as i32);

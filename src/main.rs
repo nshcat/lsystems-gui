@@ -16,6 +16,7 @@ use rendering::{Viewport};
 mod rendering;
 mod data;
 mod scene;
+mod gui_utils;
 
 use crate::data::*;
 use crate::scene::*;
