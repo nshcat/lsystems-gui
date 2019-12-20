@@ -17,8 +17,10 @@ use crate::rendering::traits::*;
 use crate::rendering::model::*;
 use crate::rendering::lighting::*;
 use crate::scene::lsystem::normal_test_material::*;
+use crate::scene::bezier::gizmos::*;
 extern crate glfw;
 
+mod gizmos;
 
 pub struct BezierEditorScene {
     /// Reference to the model to edit. This will only be modifed once the user
@@ -55,7 +57,9 @@ pub struct BezierEditorScene {
     /// Whether we are currently dragging
     in_drag: bool,
     /// The scenes lights
-    lights: LightingContext
+    lights: LightingContext,
+    /// The gizmo visualizing the cardinal axises
+    axis_gizmo: OriginGizmo
 }
 
 impl BezierEditorScene {
@@ -84,7 +88,8 @@ impl BezierEditorScene {
             drag_begin: None,
             dragged_point: None,
             lights: LightingContext::new_default(),
-            draw_normal_vectors: false
+            draw_normal_vectors: false,
+            axis_gizmo: OriginGizmo::new(0.3, 3.5)
         };
 
         scene.refresh_meshes();
@@ -269,6 +274,8 @@ impl Scene for BezierEditorScene {
     fn render(&self) {
         let mut rp = self.camera.to_render_parameters();
         rp.lighting = self.lights.clone();
+
+        self.axis_gizmo.render(&mut rp);
 
         for mesh in &self.meshes {
             mesh.render(&mut rp);

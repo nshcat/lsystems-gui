@@ -772,7 +772,9 @@ pub struct Mesh {
     /// Index buffer, which is only present if the geometry was indexed.
     index_buffer: Option<Box<dyn BufferBase>>,
     /// Size of rendered points. Only used if primitive type is "Points".
-    pub point_size: f32
+    pub point_size: f32,
+    /// Width of lines. Only used if primitve type is any of the line types.
+    pub line_width: f32
 }
 
 impl Mesh {
@@ -788,7 +790,8 @@ impl Mesh {
             draw_wireframe: false,
             num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent"),
             index_buffer: None,
-            point_size: 1.0
+            point_size: 1.0,
+            line_width: 1.0
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -818,7 +821,8 @@ impl Mesh {
             draw_wireframe: false,
             num_vertices: indices.len(),
             index_buffer: None,
-            point_size: 1.0
+            point_size: 1.0,
+            line_width: 1.0
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -897,8 +901,15 @@ impl Render for Mesh {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
             }
 
-            if let PrimitiveType::Points = self.primitive_type {
-                gl::PointSize(self.point_size as _);
+            // Set special state based on primitive type
+            match self.primitive_type {
+                PrimitiveType::Points => {
+                    gl::PointSize(self.point_size as _);
+                },
+                PrimitiveType::LineLoop | PrimitiveType::Lines | PrimitiveType::LineStrip => {
+                    gl::LineWidth(self.line_width as _);
+                },
+                _ => {}
             }
 
             if let Some(idxbuf) = &self.index_buffer {
@@ -915,6 +926,17 @@ impl Render for Mesh {
             } else {
                 gl::DrawArrays(self.primitive_type as _, 0, self.num_vertices as _);
             } 
+
+            // Reset special state based on primitive type
+            match self.primitive_type {
+                PrimitiveType::Points => {
+                    gl::PointSize(1.0);
+                },
+                PrimitiveType::LineLoop | PrimitiveType::Lines | PrimitiveType::LineStrip => {
+                    gl::LineWidth(1.0);
+                },
+                _ => {}
+            }
 
             if self.draw_wireframe {
                 gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
