@@ -543,7 +543,7 @@ impl Scene for BezierEditorScene {
                         self.refresh_control_meshes_for_dragged();
                     } else {
                         self.in_drag = false;
-                        self.refresh_meshes();
+                        self.refresh_mesh_for(self.dragged_point.unwrap().0);
                     }
                 }
             },
