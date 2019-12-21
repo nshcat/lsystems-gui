@@ -63,8 +63,12 @@ pub struct BezierEditorScene {
     axis_gizmo: OriginGizmo,
     /// Flags describing whether the subpatches are shown in the viewport or not
     active: Vec<bool>,
-    /// GUI helper that remembers for which model the popup is currently shown.
-    gui_delete_popup_id: Option<usize>
+    /// GUI helper that remembers for which bezier model a certain operation is refering to.
+    /// This is needed since for popups to work, they have to be continuously be called, even
+    /// long after the information about what button associated with what model has caused this.
+    /// This is, for example, used with the popup that ask for confirmation when trying to delete a 
+    /// bezier model.
+    gui_cached_id: Option<usize>
 }
 
 impl BezierEditorScene {
@@ -97,7 +101,7 @@ impl BezierEditorScene {
             draw_normal_vectors: false,
             axis_gizmo: OriginGizmo::new(0.3, 3.5),
             active: active,
-            gui_delete_popup_id: None
+            gui_cached_id: None
         };
 
         scene.refresh_meshes();
@@ -342,8 +346,14 @@ impl Scene for BezierEditorScene {
                     let mut modified: Option<usize> = None;
                     let mut refresh_all = false;
                     let mut to_remove: Option<usize> = None;
+
+                    // This weird hack is needed since we can't open the menu directly inside the
+                    // for loops, since we are using the id stack. For example "open_popup("bla")" would
+                    // in reality refer to "some##id##stack##elements##bla", and we would not be able to
+                    // actually draw this popup outside the loops since we cant reconstruct that id!
                     let mut show_delete_popup: Option<usize> = None;
- 
+                    let mut show_clone_menu: Option<usize> = None;
+
                     for (i, patch) in self.working_copy.patches.iter_mut().enumerate() {
                         let patch_id = ui.push_id(i as i32);
 
@@ -359,23 +369,26 @@ impl Scene for BezierEditorScene {
                             ui.same_line(0.0);
                             help_marker(ui, im_str!("Inactive models and their control points and curves are not rendered in the editor viewport."));
 
+
+                            ui.same_line(345.0);
+                    
+                            if ui.button(im_str!("Clone.."), [0.0, 0.0]) {
+                                show_clone_menu = Some(i);     
+                            }
                             
                             let colors = ui.push_style_colors(&[
                                 (StyleColor::Button, [0.6, 0.239, 0.239, 1.0]),
                                 (StyleColor::ButtonHovered, [0.7, 0.2117, 0.2117, 1.0]),
                                 (StyleColor::ButtonActive, [0.8, 0.1607, 0.1607, 1.0])
-                            ]);
+                            ]);        
             
                             ui.same_line(412.0);
 
-                    
                             if ui.button(im_str!("Remove"), [0.0, 0.0]) {
                                 show_delete_popup = Some(i);      
                             }
                     
                             colors.pop(ui);
-
-
 
                             let mut color: [f32; 3] = [patch.color.x, patch.color.y, patch.color.z];
 
@@ -451,16 +464,22 @@ impl Scene for BezierEditorScene {
                     ui.unindent();
 
                     if let Some(i) = show_delete_popup {
-                        self.gui_delete_popup_id = Some(i);
+                        self.gui_cached_id = Some(i);
                         ui.open_popup(im_str!("Delete model?"));
                         show_delete_popup = None;
+                    }
+
+                    if let Some(i) = show_clone_menu {
+                        self.gui_cached_id = Some(i);
+                        ui.open_popup(im_str!("Clone"));
+                        show_clone_menu = None;
                     }
                        
                     if let Some(button) = show_popup(ui, im_str!("Delete model?"), im_str!("Do you really want to delete the selected model?"), &vec![PopupButton::Yes, PopupButton::No]) {
                         match button {
                             PopupButton::Yes => {
                                 // Handle deletion
-                                let index = self.gui_delete_popup_id.unwrap();
+                                let index = self.gui_cached_id.unwrap();
 
                                 self.active.remove(index);
                                 self.working_copy.patches.remove(index);
@@ -470,6 +489,38 @@ impl Scene for BezierEditorScene {
                             _ => {}
                         }
                     }
+
+                    ui.popup(im_str!("Clone"), || {
+                        let mut clone_action: Option<MirrorPlane> = None;
+
+                        if Selectable::new(im_str!("Simple Clone")).build(ui) {
+                            clone_action = Some(MirrorPlane::None);
+                        }
+
+                        ui.separator();
+                        ui.text(im_str!("Mirrored Clone"));
+                        ui.same_line(0.0);
+                        help_marker(ui, im_str!("A mirroring clone uses the selected plane to mirror all control points."));
+
+                        if Selectable::new(im_str!(".. on XY plane")).build(ui) {
+                            clone_action = Some(MirrorPlane::XY);
+                        }
+
+                        if Selectable::new(im_str!(".. on XZ plane")).build(ui) {
+                            clone_action = Some(MirrorPlane::XZ);
+                        }
+                        
+                        if Selectable::new(im_str!(".. on YZ plane")).build(ui) {
+                            clone_action = Some(MirrorPlane::YZ);
+                        }
+
+                        if let Some(plane) = clone_action {
+                            let new_patch = self.working_copy.patches[self.gui_cached_id.unwrap()].clone_mirrored(plane);
+                            self.working_copy.patches.push(new_patch);
+                            self.active.push(true);
+                            refresh_all = true;
+                        }       
+                    });
                    
 
                     if refresh_all {
