@@ -95,6 +95,21 @@ impl BezierPatchParameters {
         
         temp_curve.evaluate(v)
     }
+
+    /// Clone this bezier patch, and apply mirroring on given mirror plane to the clone.
+    pub fn clone_mirrored(&self, mirror_plane: MirrorPlane) -> BezierPatchParameters {
+        let mut cloned = self.clone();
+
+        let factors = mirror_plane.factors();
+        
+        for curve in &mut cloned.curves {
+            for point in &mut curve.control_points {
+                point.component_mul_assign(&factors);
+            }
+        }
+    
+        cloned
+    }
 }
 
 /// A collection of multiple bezier patch definitions which make up a whole
@@ -124,3 +139,25 @@ impl BezierModelParameters {
     }
 }
 
+/// All possible planes that can be used to mirror a bezier model.
+#[derive(Clone, Copy)]
+pub enum MirrorPlane {
+    XY,
+    XZ,
+    YZ,
+    /// No mirroring will be performed. This is present to make GUI logic easier.
+    None
+}
+
+impl MirrorPlane {
+    /// Retrieve factor vector for given mirroring plane. This is used to
+    /// transform the coordinates of the vertices of the cloned model.
+    pub fn factors(&self) -> Vec3 {
+        match self {
+            Self::XY => Vec3::new(1.0, 1.0, -1.0),
+            Self::XZ => Vec3::new(1.0, -1.0, 1.0),
+            Self::YZ => Vec3::new(-1.0, 1.0, 1.0),
+            Self::None => Vec3::new(1.0, 1.0, 1.0)
+        }
+    }
+}
