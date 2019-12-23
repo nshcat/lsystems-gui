@@ -428,7 +428,7 @@ impl LSystemScene {
                 vertices.push(Vertex::new(position, color.clone()));
             }
 
-            let mat = Box::new(SimpleMaterial::new());
+            let mat = Box::new(ShadedMaterial::new());
             let geometry = BasicGeometry::with_auto_normals(PrimitiveType::TriangleFan, &vertices);
             let mut mesh = Mesh::new(PrimitiveType::TriangleFan, mat, &geometry);
             mesh.draw_wireframe = settings.draw_wireframe;
