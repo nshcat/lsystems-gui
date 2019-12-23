@@ -665,6 +665,12 @@ fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemScene) {
             lsystem.lsystem_params.line_draw_mode = new_mode;
             lsystem.draw_lsystem();
         }
+
+        ui.same_line(0.0);
+        help_marker(ui, im_str!("Three approaches to rendering lines are supported:\n\
+                                 \tLegacy: Renders lines using built-in OpenGL functionality. Does not support custom widths.\n\
+                                 \t2D: Uses a custom geometry shader to render lines as triangle strips. Supports arbitrary widths.\n\
+                                 \t3D: Renders lines as 3D tubes. Useful for more realistic looking models, like plants."));
     }
 }
 

@@ -339,7 +339,6 @@ impl Line3DMaterial {
                 normal_vector = normal;
                 EmitVertex();
 
-
                 gl_Position = mvp * vec4(p2, 1.0);
                 vertex_color = vertex[0].color;
                 normal_vector = normal;
