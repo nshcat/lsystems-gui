@@ -21,6 +21,7 @@ use crate::scene::*;
 use crate::scene::lsystem::bounding_box::*;
 use crate::scene::lsystem::normal_test_material::*;
 use crate::scene::lsystem::normal_color_test_material::*;
+use crate::rendering::primitives::line::*;
 
 mod bounding_box;
 pub mod normal_test_material;
@@ -75,7 +76,7 @@ impl LSystemScene {
         let bezier_mesh_manager = BezierMeshManager::from_parameters(&params.bezier_models);
 
         let poly_meshes = Self::retrieve_polygon_meshes(&lsystem, params, settings);
-        let mesh = Self::retrieve_line_mesh(&lsystem, params);
+        let mesh = Self::retrieve_line_mesh(&lsystem, params, (w, h));
         let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
         let bezier_models = Self::retrieve_bezier_models(&lsystem, &bezier_mesh_manager);
 
@@ -294,7 +295,7 @@ impl LSystemScene {
     /// Does not redraw lsystem, just recreates the meshes. Needed if mesh data changes, such as debug settings
     /// or the color palette entries.
     pub fn refresh_meshes(&mut self) {
-        self.lines_mesh = Self::retrieve_line_mesh(&self.lsystem, &self.lsystem_params);
+        self.lines_mesh = Self::retrieve_line_mesh(&self.lsystem, &self.lsystem_params, (self.width, self.height));
         self.polygon_meshes = Self::retrieve_polygon_meshes(&self.lsystem, &self.lsystem_params, &self.app_settings);
     }
 
@@ -341,40 +342,73 @@ impl LSystemScene {
     }
 
     /// Create line mesh from interpreted lsystem
-    fn retrieve_line_mesh(lsystem: &LSystem, params: &LSystemParameters) -> Mesh {
-        // We are using a flat color material here.
-        let mat = Box::new(SimpleMaterial::new());
+    fn retrieve_line_mesh(lsystem: &LSystem, params: &LSystemParameters, screen_dims: (u32, u32)) -> Mesh {
+        let mat: Box<dyn Material> = match params.line_draw_mode {
+            LineDrawMode::Basic => Box::new(SimpleMaterial::new()),
+            LineDrawMode::Advanced2D => Box::new(Line2DMaterial::new(screen_dims)),
+            LineDrawMode::Advanced3D => Box::new(Line3DMaterial::new())
+        };
 
-        // Buffer for line vertices
-        let mut vertices = Vec::new();
+        // Handle legacy lines
+        let mesh: Mesh;
 
-        // Convert LSystem-Core vector to GLM vector
-        fn convert_vector(vec: &Vector3f) -> Vec3 {
-            Vec3::new(vec.x as _, vec.y as _, vec.z as _)
+        if let LineDrawMode::Basic = params.line_draw_mode {
+            // Buffer for line vertices
+            let mut vertices = Vec::new();
+
+            for segment in &lsystem.drawing_result.line_segments {
+                // Lookup color
+                let color_index = if segment.color >= lsystem.parameters.color_palette_size as _ { 
+                    lsystem.parameters.color_palette_size - 1
+                } else {
+                    segment.color as _
+                };
+
+                let color = if params.color_palette.len() == 0 {
+                    Vec3::repeat(1.0)
+                } else {
+                    params.color_palette[color_index as usize]
+                };
+
+                let begin = Vertex::new(segment.begin.clone(), color);
+                let end = Vertex::new(segment.end.clone(), color);
+        
+                vertices.push(begin);
+                vertices.push(end);
+            }
+
+            mesh = Mesh::new(PrimitiveType::Lines, mat, &BasicGeometry::from_vertices(&vertices))
+        } else {
+            // Line geometry
+            let mut geom = LineGeometry::new();
+
+            for segment in &lsystem.drawing_result.line_segments {
+                // Lookup color
+                let color_index = if segment.color >= lsystem.parameters.color_palette_size as _ { 
+                    lsystem.parameters.color_palette_size - 1
+                } else {
+                    segment.color as _
+                };
+
+                let color = if params.color_palette.len() == 0 {
+                    Vec3::repeat(1.0)
+                } else {
+                    params.color_palette[color_index as usize]
+                };
+
+                let begin = &segment.begin;
+                let end = &segment.end;
+        
+                geom.add_segment(
+                    segment.begin.clone(), segment.end.clone(),
+                    color, segment.width
+                );
+            }
+
+            mesh = Mesh::new(PrimitiveType::Lines, mat, &geom)
         }
 
-        for segment in &lsystem.drawing_result.line_segments {
-            // Lookup color
-            let color_index = if segment.color >= lsystem.parameters.color_palette_size as _ { 
-                lsystem.parameters.color_palette_size - 1
-            } else {
-                segment.color as _
-            };
-
-            let color = if params.color_palette.len() == 0 {
-                Vec3::repeat(1.0)
-            } else {
-                params.color_palette[color_index as usize]
-            };
-
-            let begin = Vertex::new(convert_vector(&segment.begin), color);
-            let end = Vertex::new(convert_vector(&segment.end), color);
-    
-            vertices.push(begin);
-            vertices.push(end);
-        }
-
-        Mesh::new(PrimitiveType::Lines, mat, &BasicGeometry::from_vertices(&vertices))
+        mesh
     }
 
     fn retrieve_polygon_meshes(lsystem: &LSystem, params: &LSystemParameters, settings: &ApplicationSettings) -> Vec<Mesh> {
@@ -481,5 +515,11 @@ impl Scene for LSystemScene {
 
         self.width = w;
         self.height = h;
+
+        // The material in the lines mesh needs accurate viewport dimensions to function correctly
+        if let LineDrawMode::Advanced2D = self.lsystem_params.line_draw_mode {
+            let mut line_mat = self.lines_mesh.retrieve_material_mut_ref::<Line2DMaterial>();
+            line_mat.screen_dimensions = (w, h);
+        }
     }
 }

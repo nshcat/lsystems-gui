@@ -1,4 +1,4 @@
-use nalgebra_glm::{Mat4, Vec3};
+use nalgebra_glm::{Mat4, Vec3, Vec2};
 use gl::types::*;
 use std::ffi::CString;
 use std::ptr;
@@ -30,6 +30,19 @@ impl Program {
                 loc,
                 1,
                 vec as *const Vec3 as *const _
+            );
+        }
+    }
+
+    /// Set Vec2 uniform on this program object
+    pub fn set_uniform_vec2(&self, name: &str, vec: &Vec2) {
+        let loc = self.query_location(name);
+
+        unsafe {
+            gl::Uniform2fv(
+                loc,
+                1,
+                vec as *const Vec2 as *const _
             );
         }
     }

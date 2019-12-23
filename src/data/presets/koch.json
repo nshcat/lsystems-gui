@@ -18,6 +18,7 @@
   "camera_theta": 0.0,
   "axiom": "F--F--F",
   "seed": 0,
+  "line_draw_mode": "Basic",
   "iteration_depth": 2,
   "rules": [
     "F -> F+F--F+F"

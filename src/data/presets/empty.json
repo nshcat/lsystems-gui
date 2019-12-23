@@ -17,6 +17,7 @@
   "camera_phi": 0.0,
   "camera_theta": 0.0,
   "axiom": "",
+  "line_draw_mode": "Basic",
   "seed": 0,
   "iteration_depth": 1,
   "rules": [

@@ -10,6 +10,7 @@ pub mod materials;
 pub mod model;
 pub mod lighting;
 pub mod bezier;
+pub mod primitives;
 
 use crate::rendering::lighting::*;
 use nalgebra_glm::{Mat4, Vec3};
@@ -36,25 +37,28 @@ pub struct RenderParameters {
     /// The model transformation matrix
     pub model: Mat4,
     /// The current lighting context
-    pub lighting: LightingContext
+    pub lighting: LightingContext,
+    /// The position of the camera, in world space.
+    pub camera_position: Vec3
 }
 
 impl RenderParameters {
     /// Create a new instance based on given projection and view matrices.
-    pub fn new(view: Mat4, proj: Mat4) -> RenderParameters {
+    pub fn new(pos: Vec3, view: Mat4, proj: Mat4) -> RenderParameters {
         RenderParameters {
             view: view,
             projection: proj,
             matrix_stack: Vec::new(),
             model: Mat4::identity(),
-            lighting: LightingContext::new_default()
+            lighting: LightingContext::new_default(),
+            camera_position: pos
         }
     }
 
     /// Create a new render parameters instance that contains only identity matrices.
     /// For testing purposes only.
     pub fn identity() -> RenderParameters {
-        Self::new(Mat4::identity(), Mat4::identity())
+        Self::new(Vec3::zeros(), Mat4::identity(), Mat4::identity())
     }
 
     /// Push the current model matrix on to the matrix stack, saving it for later restoration.

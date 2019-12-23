@@ -619,6 +619,28 @@ fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemScene) {
                 modified = true;
         }
 
+        let mut line_width: f32 = params.initial_line_width as _;
+        if ui.drag_float(im_str!("Line Width"), &mut line_width)
+            .min(0.0)
+            .max(360.0)
+            .display_format(im_str!("%.2lf"))
+            .speed(0.01)
+            .build() {
+                params.initial_line_width = line_width as _;
+                modified = true;
+        }
+
+        let mut line_delta: f32 = params.line_width_delta as _;
+        if ui.drag_float(im_str!("Line Width Delta"), &mut line_delta)
+            .min(0.0)
+            .max(360.0)
+            .display_format(im_str!("%.2lf"))
+            .speed(0.01)
+            .build() {
+                params.line_width_delta = line_delta as _;
+                modified = true;
+        }
+
         if modified {
             lsystem.refresh_drawing_parameters();
         }
@@ -629,6 +651,26 @@ fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemScene) {
         if Slider::<u32>::new(im_str!("Iterations"), 0..=13).build(ui, &mut lsystem.lsystem_params.iteration_depth) {
             lsystem.refresh_iteration_depth();
         }
+
+        let mut current_item: i32 = lsystem.lsystem_params.line_draw_mode as _;
+        let items = vec![im_str!("Legacy Lines"), im_str!("2D Lines"), im_str!("3D Lines")];
+
+        if ui.combo(im_str!("Line Mode"), &mut current_item, &items, 3) {
+            let new_mode = match current_item {
+                0 => LineDrawMode::Basic,
+                1 => LineDrawMode::Advanced2D,
+                _ => LineDrawMode::Advanced3D
+            };
+
+            lsystem.lsystem_params.line_draw_mode = new_mode;
+            lsystem.draw_lsystem();
+        }
+
+        ui.same_line(0.0);
+        help_marker(ui, im_str!("Three approaches to rendering lines are supported:\n\
+                                 \tLegacy: Renders lines using built-in OpenGL functionality. Does not support custom widths.\n\
+                                 \t2D: Uses a custom geometry shader to render lines as triangle strips. Supports arbitrary widths.\n\
+                                 \t3D: Renders lines as 3D tubes. Useful for more realistic looking models, like plants."));
     }
 }
 
