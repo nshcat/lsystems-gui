@@ -619,6 +619,28 @@ fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemScene) {
                 modified = true;
         }
 
+        let mut line_width: f32 = params.initial_line_width as _;
+        if ui.drag_float(im_str!("Line Width"), &mut line_width)
+            .min(0.0)
+            .max(360.0)
+            .display_format(im_str!("%.2lf"))
+            .speed(0.01)
+            .build() {
+                params.initial_line_width = line_width as _;
+                modified = true;
+        }
+
+        let mut line_delta: f32 = params.line_width_delta as _;
+        if ui.drag_float(im_str!("Line Width Delta"), &mut line_delta)
+            .min(0.0)
+            .max(360.0)
+            .display_format(im_str!("%.2lf"))
+            .speed(0.01)
+            .build() {
+                params.line_width_delta = line_delta as _;
+                modified = true;
+        }
+
         if modified {
             lsystem.refresh_drawing_parameters();
         }

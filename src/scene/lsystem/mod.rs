@@ -60,9 +60,7 @@ pub struct LSystemScene {
     /// Screen width
     pub width: u32,
     /// Screen height
-    pub height: u32,
-
-    pub test_mesh: Mesh
+    pub height: u32
 }
 
 impl LSystemScene {
@@ -82,33 +80,6 @@ impl LSystemScene {
         let bb = Self::calculate_bounding_box(&settings.bounding_box_color, &lsystem);
         let bezier_models = Self::retrieve_bezier_models(&lsystem, &bezier_mesh_manager);
 
-
-        // TEST BEGIN
-        let mut geom = LineGeometry::new();
-        let pos1 = Vec3::new(-0.7, 0.0, -0.3);
-        let pos2 = Vec3::new(-0.25, 0.0, -0.3);
-        let pos3 = Vec3::new(0.0, 0.0, 0.0);
-        let pos4 = Vec3::new(0.5, 0.0, 0.0);
-        let pos5 = Vec3::new(0.75, 0.0, 0.30);
-
-        geom.positions.local_buffer = vec![pos1, pos2, pos3, pos4, pos5];
-        geom.colors.local_buffer = vec![Vec3::new(0.15, 0.63, 0.045); 5];
-
-        geom.widths.local_buffer = vec![5.0; 5];
-        //geom.widths.local_buffer = vec![1.5; 5];
-        geom.indices = vec![
-            0u32, 1u32,
-            1u32, 2u32,
-            2u32, 3u32,
-            3u32, 4u32
-        ];
-
-        let mat = Box::new(Line3DMaterial::new());
-
-        let test_mesh = Mesh::new_indexed(PrimitiveType::Lines, mat, &geom);
-        // TEST END
-
-
         let mut scene = LSystemScene{
             lsystem_params: params.clone(),
             app_settings: settings.clone(),
@@ -121,8 +92,7 @@ impl LSystemScene {
             width: w,
             height: h,
             bezier_manager: bezier_mesh_manager,
-            bezier_models: bezier_models,
-            test_mesh: test_mesh
+            bezier_models: bezier_models
         };
 
         if settings.auto_center_camera {
@@ -497,8 +467,6 @@ impl Scene for LSystemScene {
                 bb.render(&mut params);
             }
         }
-
-        self.test_mesh.render(&mut params);
     }
 
     /// Perform logic. Currently, this means checking if a BezierEditorScene just ended, which would mean
@@ -549,7 +517,9 @@ impl Scene for LSystemScene {
         self.height = h;
 
         // The material in the lines mesh needs accurate viewport dimensions to function correctly
-        let mut line_mat = self.lines_mesh.retrieve_material_mut_ref::<Line2DMaterial>();
-        line_mat.screen_dimensions = (w, h);
+        if let LineDrawMode::Advanced2D = self.lsystem_params.line_draw_mode {
+            let mut line_mat = self.lines_mesh.retrieve_material_mut_ref::<Line2DMaterial>();
+            line_mat.screen_dimensions = (w, h);
+        }
     }
 }
