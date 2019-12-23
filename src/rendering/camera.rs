@@ -125,7 +125,7 @@ impl Camera {
 
     /// Extract relevant camera information to use in a rendering operation
     pub fn to_render_parameters(&self) -> RenderParameters {
-        RenderParameters::new(self.view, self.projection)
+        RenderParameters::new(self.camera_position(), self.view, self.projection)
     }
 
     /// An internal method used to update the view matrix after camera state

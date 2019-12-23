@@ -15,6 +15,7 @@
   "modify_camera": false,
   "camera_radius": 0.0,
   "camera_phi": 0.0,
+  "line_draw_mode": "Basic",
   "camera_theta": 0.0,
   "axiom": "[7]++[7]++[7]++[7]++[7]",
   "seed": 0,

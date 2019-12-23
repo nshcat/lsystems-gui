@@ -759,7 +759,9 @@ pub enum PrimitiveType {
     Lines = gl::LINES,
     LineStrip = gl::LINE_STRIP,
     LineLoop = gl::LINE_LOOP,
-    Points = gl::POINTS
+    Points = gl::POINTS,
+    LinesAdjacency = gl::LINES_ADJACENCY,
+    LineStripAdjacency = gl::LINE_STRIP_ADJACENCY
 }
 
 /// A mesh is a combination of geometry and a material, which can not be changed.

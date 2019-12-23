@@ -629,6 +629,20 @@ fn do_drawing_parameters(ui: &Ui, lsystem: &mut LSystemScene) {
         if Slider::<u32>::new(im_str!("Iterations"), 0..=13).build(ui, &mut lsystem.lsystem_params.iteration_depth) {
             lsystem.refresh_iteration_depth();
         }
+
+        let mut current_item: i32 = lsystem.lsystem_params.line_draw_mode as _;
+        let items = vec![im_str!("Legacy Lines"), im_str!("2D Lines"), im_str!("3D Lines")];
+
+        if ui.combo(im_str!("Line Mode"), &mut current_item, &items, 3) {
+            let new_mode = match current_item {
+                0 => LineDrawMode::Basic,
+                1 => LineDrawMode::Advanced2D,
+                _ => LineDrawMode::Advanced3D
+            };
+
+            lsystem.lsystem_params.line_draw_mode = new_mode;
+            lsystem.draw_lsystem();
+        }
     }
 }
 

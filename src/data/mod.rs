@@ -14,6 +14,18 @@ pub mod presets;
 pub mod bezier;
 
 
+/// Enumeration describing the different line rendering modes that can be used by a
+/// lsystem.
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u32)]
+pub enum LineDrawMode {
+	/// Use built-in OpenGL line rendering. Can only do a width of 1.0.
+	Basic = 0,
+	/// 2D lines made out of triangle strips with arbitrary width.
+	Advanced2D = 1,
+	/// 3D, tube-like lines.
+	Advanced3D = 2
+}
 
 /// A special structure used to represent a single interpretation mapping.
 /// This is only used with the GUI, and the Option allows the user to have interpretations
@@ -76,6 +88,7 @@ pub struct LSystemParameters {
 	pub camera_theta: f64,
 	pub axiom: String,
 	pub seed: u64,
+	pub line_draw_mode: LineDrawMode,
 	pub iteration_depth: u32,
 	pub rules: Vec<String>,
 	/// The usage of a Vec instead of a associative container is done in order to preserve
