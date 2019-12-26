@@ -536,6 +536,64 @@ impl Geometry for BasicGeometry {
     }
 }
 
+/// A struct storing vertex information for basic drawing operations: position, color and
+/// normal vector, and using indexed drawing.
+#[derive(Clone)]
+pub struct BasicIndexedGeometry {
+    /// Position value for each vertex
+    pub positions: AttributeArray<Vec3>,
+    /// Color value for each vertex
+    pub colors: AttributeArray<Vec3>,
+    /// Normal vector for each vertex
+    pub normals: AttributeArray<Vec3>,
+    /// Indices for indexed rendering
+    pub indices: Vec<u32>
+}
+
+impl BasicIndexedGeometry {
+    /// Construct empty geometry
+    pub fn new() -> BasicIndexedGeometry {
+        BasicIndexedGeometry {
+            positions: AttributeArray::new(0, "position"),
+            colors: AttributeArray::new(1, "color"),
+            normals: AttributeArray::new(2, "normal"),
+            indices: Vec::new()
+        }
+    }
+
+    /// Merge given basic geometry instance into this indexed geometry, using primitive
+    /// restart.
+    pub fn merge_into(&mut self, other: &BasicGeometry, restart_index: u32) {
+        // The current vertex index.
+        let mut current_vertex = self.positions.len();
+
+        // Make sure the restart the primitive
+        self.indices.push(restart_index);
+
+        // Attach all vertices and their information
+        for i in 0..other.positions.len() {
+            self.positions.local_buffer.push(other.positions.local_buffer[i].clone());
+            self.colors.local_buffer.push(other.colors.local_buffer[i].clone());
+            self.normals.local_buffer.push(other.normals.local_buffer[i].clone());
+            self.indices.push(current_vertex as _);
+
+            current_vertex = current_vertex + 1;
+        }
+    }
+}
+
+impl Geometry for BasicIndexedGeometry {
+    fn retrieve_attributes(&self) -> Vec<&dyn AttributeArrayBase> {
+        vec![&self.positions, &self.colors, &self.normals]
+    }
+}
+
+impl IndexedGeometry for BasicIndexedGeometry {
+    fn retrieve_indices(&self) -> &[u32] {
+        &self.indices
+    }
+}
+
 /// A geometry that generates a sphere. Uses GL_TRIANGLES
 pub struct SphereGeometry {
     positions: AttributeArray<Vec3>,
@@ -785,7 +843,9 @@ pub struct Mesh {
     /// Size of rendered points. Only used if primitive type is "Points".
     pub point_size: f32,
     /// Width of lines. Only used if primitve type is any of the line types.
-    pub line_width: f32
+    pub line_width: f32,
+    /// Controls primitive restart. If this is None, primitive restart will be disabled.
+    pub primitive_restart_index: Option<u32>
 }
 
 impl Mesh {
@@ -802,7 +862,8 @@ impl Mesh {
             num_vertices: Self::retrieve_vertex_count(&attributes).expect("Geometry attribute buffer sizes inconsistent"),
             index_buffer: None,
             point_size: 1.0,
-            line_width: 1.0
+            line_width: 1.0,
+            primitive_restart_index: None
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -833,7 +894,8 @@ impl Mesh {
             num_vertices: indices.len(),
             index_buffer: None,
             point_size: 1.0,
-            line_width: 1.0
+            line_width: 1.0,
+            primitive_restart_index: None
         };
 
         // Create buffers and register attributes with vao for each attribute in the geometry
@@ -924,6 +986,11 @@ impl Render for Mesh {
             }
 
             if let Some(idxbuf) = &self.index_buffer {
+                if let Some(pridx) = self.primitive_restart_index {
+                    gl::Enable(gl::PRIMITIVE_RESTART);
+                    gl::PrimitiveRestartIndex(pridx as _);
+                }
+
                 idxbuf.enable();
 
                 gl::DrawElements(
@@ -934,6 +1001,10 @@ impl Render for Mesh {
                 );
 
                 idxbuf.disable();
+
+                if let Some(_) = self.primitive_restart_index {
+                    gl::Disable(gl::PRIMITIVE_RESTART);
+                }
             } else {
                 gl::DrawArrays(self.primitive_type as _, 0, self.num_vertices as _);
             } 

@@ -414,6 +414,8 @@ impl LSystemScene {
     fn retrieve_polygon_meshes(lsystem: &LSystem, params: &LSystemParameters, settings: &ApplicationSettings) -> Vec<Mesh> {
         let mut meshes = Vec::new();
 
+        let mut combined_geometry = BasicIndexedGeometry::new();
+
         for polygon in &lsystem.drawing_result.polygons {
             let color = if params.color_palette.len() > 0 {
                 params.color_palette[polygon.color as usize]
@@ -428,11 +430,10 @@ impl LSystemScene {
                 vertices.push(Vertex::new(position, color.clone()));
             }
 
-            let mat = Box::new(ShadedMaterial::new());
+            
             let geometry = BasicGeometry::with_auto_normals(PrimitiveType::TriangleFan, &vertices);
-            let mut mesh = Mesh::new(PrimitiveType::TriangleFan, mat, &geometry);
-            mesh.draw_wireframe = settings.draw_wireframe;
-            meshes.push(mesh);
+            
+            combined_geometry.merge_into(&geometry, 0xFFFFFFFFu32);
 
             if settings.show_normals {
                 let mat = Box::new(NormalTestMaterial::new((params.drawing_parameters.step/2.0) as _, &Vec3::new(1.0, 1.0, 0.0)));
@@ -441,6 +442,12 @@ impl LSystemScene {
                 meshes.push(mesh);
             }
         }
+
+        let mat = Box::new(ShadedMaterial::new());
+        let mut mesh = Mesh::new_indexed(PrimitiveType::TriangleFan, mat, &combined_geometry);
+        mesh.primitive_restart_index = Some(0xFFFFFFFFu32);
+        mesh.draw_wireframe = settings.draw_wireframe;
+        meshes.push(mesh);
 
         meshes
     }
